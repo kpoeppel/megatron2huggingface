@@ -1,0 +1,6 @@
+[submodule "transformers"]
+	path = transformers
+	url = ./transformers
+[submodule "Megatron-LM"]
+	path = Megatron-LM
+	url = ./Megatron-LM/

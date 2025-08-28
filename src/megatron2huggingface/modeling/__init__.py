@@ -1,0 +1,20 @@
+"""
+Modular HuggingFace-compatible Megatron model components.
+"""
+
+from .attention import SelfAttention
+from .mlp import MLP, SwiGLUMLP, GeGLUMLP
+from .layer_norm import RMSNorm, LayerNorm
+from .embeddings import MegatronRotaryEmbedding
+from .decoder_layer import TransformerLayer
+
+__all__ = [
+    "SelfAttention",
+    "MLP",
+    "SwiGLUMLP",
+    "GeGLUMLP",
+    "RMSNorm",
+    "LayerNorm",
+    "MegatronRotaryEmbedding",
+    "TransformerLayer",
+]
