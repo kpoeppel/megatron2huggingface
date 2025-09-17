@@ -1,17 +1,15 @@
-"""
-Base utilities for modular checkpoint conversion between Megatron-LM and HuggingFace.
+"""Base utilities for modular checkpoint conversion between Megatron-LM and
+HuggingFace.
 
-This module provides the foundation for modular conversion, including distributed
-checkpoint loading and a conversion registry system.
+This module provides the foundation for modular conversion, including
+distributed checkpoint loading and a conversion registry system.
 """
 
-import os
-import json
 import subprocess
-from typing import Dict, Any, Optional, List, Callable, TypeVar, Union
+from typing import Any, TypeVar
+from collections.abc import Callable
 from pathlib import Path
 import logging
-from abc import ABC, abstractmethod
 
 import torch
 import numpy as np
@@ -23,9 +21,11 @@ MegatronModule = TypeVar("MegatronModule")
 HuggingFaceModule = TypeVar("HuggingFaceModule")
 
 
-def extract_submodule_state_dict(state_dict: Dict[str, torch.Tensor], prefix: str) -> Dict[str, torch.Tensor]:
-    """
-    Extract a submodule's state dict by removing the specified prefix from matching keys.
+def extract_submodule_state_dict(
+    state_dict: dict[str, torch.Tensor], prefix: str
+) -> dict[str, torch.Tensor]:
+    """Extract a submodule's state dict by removing the specified prefix from
+    matching keys.
 
     Args:
         state_dict: Full state dictionary
@@ -48,9 +48,10 @@ def extract_submodule_state_dict(state_dict: Dict[str, torch.Tensor], prefix: st
     return submodule_dict
 
 
-def add_prefix_to_state_dict(state_dict: Dict[str, torch.Tensor], prefix: str) -> Dict[str, torch.Tensor]:
-    """
-    Add a prefix to all keys in a state dictionary.
+def add_prefix_to_state_dict(
+    state_dict: dict[str, torch.Tensor], prefix: str
+) -> dict[str, torch.Tensor]:
+    """Add a prefix to all keys in a state dictionary.
 
     Args:
         state_dict: State dictionary to add prefix to
@@ -77,10 +78,16 @@ def add_prefix_to_state_dict(state_dict: Dict[str, torch.Tensor], prefix: str) -
     return prefixed_dict
 
 
-def get_git_commit_hash(repo_path: str) -> Optional[str]:
+def get_git_commit_hash(repo_path: str) -> str | None:
     """Get the current git commit hash for a repository."""
     try:
-        result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_path, capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         return result.stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         logger.warning(f"Could not get git commit hash for {repo_path}")
@@ -90,7 +97,7 @@ def get_git_commit_hash(repo_path: str) -> Optional[str]:
 class ConversionRegistry:
     """Registry for component-specific conversion functions."""
 
-    _converters: Dict[str, Callable] = {}
+    _converters: dict[str, Callable] = {}
 
     @classmethod
     def register(cls, component_name: str):
@@ -103,12 +110,12 @@ class ConversionRegistry:
         return decorator
 
     @classmethod
-    def get_converter(cls, component_name: str) -> Optional[Callable]:
+    def get_converter(cls, component_name: str) -> Callable | None:
         """Get a registered converter by name."""
         return cls._converters.get(component_name)
 
     @classmethod
-    def list_converters(cls) -> List[str]:
+    def list_converters(cls) -> list[str]:
         """List all registered converter names."""
         return list(cls._converters.keys())
 
@@ -117,8 +124,7 @@ class MegatronCheckpointLoader:
     """Handles loading of distributed Megatron-LM checkpoints."""
 
     def __init__(self, checkpoint_path: str, megatron_path: str):
-        """
-        Initialize the checkpoint loader.
+        """Initialize the checkpoint loader.
 
         Args:
             checkpoint_path: Path to the Megatron checkpoint directory
@@ -133,14 +139,14 @@ class MegatronCheckpointLoader:
         if str(self.megatron_path) not in sys.path:
             sys.path.insert(0, str(self.megatron_path))
 
-    def _find_checkpoint_files(self) -> List[Path]:
+    def _find_checkpoint_files(self) -> list[Path]:
         """Find all checkpoint files in the directory."""
         checkpoint_files = []
 
         # Look for latest iteration file
         latest_file = self.checkpoint_path / "latest_checkpointed_iteration.txt"
         if latest_file.exists():
-            with open(latest_file, "r") as f:
+            with open(latest_file) as f:
                 iteration = f.read().strip()
 
             # Find all model files for this iteration
@@ -153,21 +159,22 @@ class MegatronCheckpointLoader:
             checkpoint_files.extend(self.checkpoint_path.glob("**/model_optim_rng.pt"))
 
         if not checkpoint_files:
-            raise FileNotFoundError(f"No checkpoint files found in {self.checkpoint_path}")
+            raise FileNotFoundError(
+                f"No checkpoint files found in {self.checkpoint_path}"
+            )
 
         return sorted(checkpoint_files)
 
-    def load_distributed_checkpoint(self) -> Dict[str, Any]:
-        """
-        Load a distributed Megatron checkpoint using Megatron's utilities.
+    def load_distributed_checkpoint(self) -> dict[str, Any]:
+        """Load a distributed Megatron checkpoint using Megatron's utilities.
 
         Returns:
             Dictionary containing the merged checkpoint data
         """
         try:
             # Try to use Megatron's distributed checkpoint utilities
-            from megatron.core import dist_checkpointing
-            from megatron.training.checkpointing import load_checkpoint
+            # from megatron.core import dist_checkpointing
+            # from megatron.training.checkpointing import load_checkpoint
 
             # This is a simplified approach - in practice, you might need to
             # initialize Megatron's distributed environment properly
@@ -178,7 +185,9 @@ class MegatronCheckpointLoader:
             merged_state = {}
 
             for i, ckpt_file in enumerate(checkpoint_files):
-                logger.info(f"Loading checkpoint file {i + 1}/{len(checkpoint_files)}: {ckpt_file}")
+                logger.info(
+                    f"Loading checkpoint file {i + 1}/{len(checkpoint_files)}: {ckpt_file}"
+                )
                 ckpt = torch.load(ckpt_file, map_location="cpu")
 
                 if i == 0:
@@ -187,7 +196,9 @@ class MegatronCheckpointLoader:
                 else:
                     # Merge model state from other files
                     if "model" in ckpt:
-                        self._merge_model_state(merged_state.get("model", {}), ckpt["model"])
+                        self._merge_model_state(
+                            merged_state.get("model", {}), ckpt["model"]
+                        )
 
             return merged_state
 
@@ -198,7 +209,7 @@ class MegatronCheckpointLoader:
             )
             return self._load_simple_checkpoint()
 
-    def _load_simple_checkpoint(self) -> Dict[str, Any]:
+    def _load_simple_checkpoint(self) -> dict[str, Any]:
         """Simple checkpoint loading for non-distributed checkpoints."""
         checkpoint_files = self._find_checkpoint_files()
 
@@ -218,11 +229,15 @@ class MegatronCheckpointLoader:
                     merged_state = ckpt.copy()
                 else:
                     if "model" in ckpt:
-                        self._merge_model_state(merged_state.get("model", {}), ckpt["model"])
+                        self._merge_model_state(
+                            merged_state.get("model", {}), ckpt["model"]
+                        )
 
             return merged_state
 
-    def _merge_model_state(self, base_state: Dict[str, torch.Tensor], new_state: Dict[str, torch.Tensor]):
+    def _merge_model_state(
+        self, base_state: dict[str, torch.Tensor], new_state: dict[str, torch.Tensor]
+    ):
         """Merge model state dictionaries, handling tensor parallelism."""
         for key, tensor in new_state.items():
             if key in base_state:
@@ -236,7 +251,9 @@ class MegatronCheckpointLoader:
                             try:
                                 concatenated = torch.cat([base_tensor, tensor], dim=dim)
                                 base_state[key] = concatenated
-                                logger.debug(f"Concatenated {key} along dimension {dim}")
+                                logger.debug(
+                                    f"Concatenated {key} along dimension {dim}"
+                                )
                                 break
                             except RuntimeError:
                                 continue
@@ -253,10 +270,14 @@ class MegatronCheckpointLoader:
                 # New tensor
                 base_state[key] = tensor
 
-    def get_model_config(self, checkpoint: Dict[str, Any]) -> Dict[str, Any]:
+    def get_model_config(self, checkpoint: dict[str, Any]) -> dict[str, Any]:
         """Extract model configuration from checkpoint."""
         if "args" in checkpoint:
-            return vars(checkpoint["args"]) if hasattr(checkpoint["args"], "__dict__") else checkpoint["args"]
+            return (
+                vars(checkpoint["args"])
+                if hasattr(checkpoint["args"], "__dict__")
+                else checkpoint["args"]
+            )
         elif "hyper_parameters" in checkpoint:
             return checkpoint["hyper_parameters"]
         else:
@@ -267,18 +288,18 @@ class MegatronCheckpointLoader:
 class BaseConverter:
     """Base class for component converters."""
 
-    def __init__(self, megatron_config: Dict[str, Any]):
-        """
-        Initialize the converter with Megatron configuration.
+    def __init__(self, megatron_config: dict[str, Any]):
+        """Initialize the converter with Megatron configuration.
 
         Args:
             megatron_config: Dictionary containing Megatron model configuration
         """
         self.megatron_config = megatron_config
 
-    def convert_weights(self, megatron_weights: Dict[str, torch.Tensor], **kwargs) -> Dict[str, torch.Tensor]:
-        """
-        Convert weights from Megatron format to HuggingFace format.
+    def convert_weights(
+        self, megatron_weights: dict[str, torch.Tensor], **kwargs
+    ) -> dict[str, torch.Tensor]:
+        """Convert weights from Megatron format to HuggingFace format.
 
         Args:
             megatron_weights: Megatron model weights dictionary
@@ -291,8 +312,7 @@ class BaseConverter:
         raise NotImplementedError("Subclasses must implement convert_weights")
 
     def create_hf_module(self, config, **kwargs):
-        """
-        Create a HuggingFace module instance.
+        """Create a HuggingFace module instance.
 
         Args:
             config: HuggingFace configuration object
@@ -304,8 +324,7 @@ class BaseConverter:
         raise NotImplementedError("Subclasses must implement create_hf_module")
 
     def create_megatron_module(self, **kwargs):
-        """
-        Create a Megatron module instance for comparison.
+        """Create a Megatron module instance for comparison.
 
         Args:
             **kwargs: Module parameters
@@ -316,10 +335,19 @@ class BaseConverter:
         raise NotImplementedError("Subclasses must implement create_megatron_module")
 
     def test_conversion(
-        self, megatron_state: Dict[str, torch.Tensor], hf_config, test_input: torch.Tensor, **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Test the conversion by comparing outputs of Megatron and HuggingFace modules.
+        self,
+        megatron_state: dict[str, torch.Tensor],
+        hf_config,
+        test_input: torch.Tensor,
+        additional_inputs: dict[str, Any] = {},
+        assert_error: bool = True,
+        atol: float = 1e-3,
+        rtol: float = 1e-3,
+        permute_megatron_output: list[int] | None = None,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """Test the conversion by comparing outputs of Megatron and HuggingFace
+        modules.
 
         Args:
             megatron_state: Megatron model state dictionary
@@ -334,15 +362,19 @@ class BaseConverter:
         hf_weights = self.convert_weights(megatron_state, **kwargs)
 
         # Create modules
-        hf_module = self.create_hf_module(hf_config, **kwargs)
-        megatron_module = self.create_megatron_module(**kwargs)
+        hf_module = self.create_hf_module(hf_config, **kwargs).to(
+            device=test_input.device
+        )
+
+        megatron_module = self.create_megatron_module(**kwargs).to(
+            device=test_input.device
+        )
 
         # Load weights
         hf_module.load_state_dict(hf_weights, strict=False)
 
         # Extract and load Megatron weights
-        megatron_weights = self._extract_megatron_weights(megatron_state, **kwargs)
-        megatron_module.load_state_dict(megatron_weights, strict=False)
+        megatron_module.load_state_dict(megatron_state, strict=False)
 
         # Set to eval mode
         hf_module.eval()
@@ -350,8 +382,8 @@ class BaseConverter:
 
         # Forward pass
         with torch.no_grad():
-            hf_output = hf_module(test_input)
-            megatron_output = megatron_module(test_input)
+            hf_output = hf_module(test_input, **additional_inputs)
+            megatron_output = megatron_module(test_input, **additional_inputs)
 
         # Compare outputs
         if isinstance(hf_output, tuple):
@@ -359,10 +391,23 @@ class BaseConverter:
         if isinstance(megatron_output, tuple):
             megatron_output = megatron_output[0]
 
+        if permute_megatron_output:
+            megatron_output = megatron_output.permute(*permute_megatron_output)
+
         # Calculate metrics
         mse = torch.mean((hf_output - megatron_output) ** 2).item()
         max_diff = torch.max(torch.abs(hf_output - megatron_output)).item()
-        relative_error = (torch.norm(hf_output - megatron_output) / torch.norm(megatron_output)).item()
+        relative_error = (
+            torch.norm(hf_output - megatron_output) / torch.norm(megatron_output)
+        ).item()
+
+        if assert_error:
+            np.testing.assert_allclose(
+                hf_output.detach().cpu().numpy(),
+                megatron_output.detach().cpu().numpy(),
+                atol=atol,
+                rtol=rtol,
+            )
 
         return {
             "mse": mse,
@@ -370,17 +415,19 @@ class BaseConverter:
             "relative_error": relative_error,
             "hf_output_shape": hf_output.shape,
             "megatron_output_shape": megatron_output.shape,
-            "test_passed": mse < 1e-5 and relative_error < 1e-3,
+            "test_passed": np.allclose(
+                hf_output.detach().cpu().numpy(),
+                megatron_output.detach().cpu().numpy(),
+                atol=atol,
+                rtol=rtol,
+            ),
         }
 
-    def _extract_megatron_weights(self, megatron_state: Dict[str, torch.Tensor], **kwargs) -> Dict[str, torch.Tensor]:
-        """Extract weights for the specific Megatron module. Override in subclasses."""
-        return {}
 
-
-def load_megatron_checkpoint(checkpoint_path: str, megatron_path: str) -> Dict[str, Any]:
-    """
-    Convenience function to load a Megatron checkpoint.
+def load_megatron_checkpoint(
+    checkpoint_path: str, megatron_path: str
+) -> dict[str, Any]:
+    """Convenience function to load a Megatron checkpoint.
 
     Args:
         checkpoint_path: Path to checkpoint directory

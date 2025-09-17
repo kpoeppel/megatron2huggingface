@@ -1,4 +1,3 @@
-import pytest
 from megatron2huggingface.configuration import (
     get_megatron_parser,
     get_args_and_types,
@@ -26,7 +25,9 @@ def test_get_args_and_types():
 
 
 def test_generate_docstring():
-    res = _generate_docstring({"foo": (int, 1), "bar": (int, None), "name": (str, "name")})
+    res = _generate_docstring(
+        {"foo": (int, 1), "bar": (int, None), "name": (str, "name")}
+    )
     assert (
         res.strip("\n")
         == """
@@ -65,16 +66,16 @@ def test_generate_assignments():
 def test_generate_config():
     config = {"foo": (int, 1), "bar": (int, None)}
 
-    res = generate_config(config, class_name="TestConfig")
+    res = generate_config(config, parser=get_megatron_parser(), class_name="TestConfig")
 
     assert (
         res.strip("\n")
         == '''
-"""Megatron model configuration"""
+"""Megatron model configuration - generated from megatron2huggingface"""
 
 from typing import Any
 
-from ...configuration_utils import PretrainedConfig
+from transformers.configuration_utils import PretrainedConfig
 
 class TestConfig(PretrainedConfig):
     r"""

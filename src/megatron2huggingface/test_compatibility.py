@@ -1,26 +1,28 @@
-"""
-Comprehensive test functionality for Megatron-LM to HuggingFace compatibility.
-Tests full model conversion and inference compatibility between frameworks.
+"""Comprehensive test functionality for Megatron-LM to HuggingFace
+compatibility.
+
+Tests full model conversion and inference compatibility between
+frameworks.
 """
 
 import logging
 import torch
-import torch.nn as nn
-from typing import Dict, Any, Optional, Tuple
+from typing import Any
 import tempfile
-import shutil
-from pathlib import Path
 
 from megatron2huggingface.modeling_megatron import MegatronForCausalLM
 from megatron2huggingface.configuration_megatron import MegatronConfig
-from megatron2huggingface.conversion.model import ModelConverter, convert_megatron_checkpoint_to_hf
+from megatron2huggingface.conversion.model import (
+    ModelConverter,
+    convert_megatron_checkpoint_to_hf,
+)
 from megatron2huggingface.conversion.base import MegatronCheckpointLoader
 
 logger = logging.getLogger(__name__)
 
 
 def test_model_compatibility(
-    megatron_checkpoint_path: Optional[str] = None,
+    megatron_checkpoint_path: str | None = None,
     vocab_size: int = 32000,
     hidden_size: int = 4096,
     num_layers: int = 2,
@@ -32,8 +34,8 @@ def test_model_compatibility(
     device: str = "cpu",
     tolerance: float = 1e-4,
 ) -> bool:
-    """
-    Test compatibility between Megatron and HuggingFace model implementations.
+    """Test compatibility between Megatron and HuggingFace model
+    implementations.
 
     Args:
         megatron_checkpoint_path: Path to actual Megatron checkpoint (optional)
@@ -54,7 +56,9 @@ def test_model_compatibility(
     logger.info("Starting model compatibility test...")
 
     if megatron_checkpoint_path:
-        return test_real_checkpoint_compatibility(megatron_checkpoint_path, batch_size, seq_len, device, tolerance)
+        return test_real_checkpoint_compatibility(
+            megatron_checkpoint_path, batch_size, seq_len, device, tolerance
+        )
     else:
         return test_synthetic_model_compatibility(
             vocab_size,
@@ -77,8 +81,7 @@ def test_real_checkpoint_compatibility(
     device: str = "cpu",
     tolerance: float = 1e-4,
 ) -> bool:
-    """
-    Test compatibility using a real Megatron checkpoint.
+    """Test compatibility using a real Megatron checkpoint.
 
     Args:
         megatron_checkpoint_path: Path to Megatron checkpoint
@@ -95,11 +98,15 @@ def test_real_checkpoint_compatibility(
     try:
         # Load Megatron checkpoint
         checkpoint_loader = MegatronCheckpointLoader()
-        megatron_weights, megatron_config = checkpoint_loader.load_checkpoint(megatron_checkpoint_path)
+        megatron_weights, megatron_config = checkpoint_loader.load_checkpoint(
+            megatron_checkpoint_path
+        )
 
         # Convert to HuggingFace format
         with tempfile.TemporaryDirectory() as temp_dir:
-            hf_model_path = convert_megatron_checkpoint_to_hf(megatron_checkpoint_path, temp_dir)
+            hf_model_path = convert_megatron_checkpoint_to_hf(
+                megatron_checkpoint_path, temp_dir
+            )
 
             # Load HuggingFace model
             hf_config = MegatronConfig.from_pretrained(hf_model_path)
@@ -109,7 +116,9 @@ def test_real_checkpoint_compatibility(
 
             # Create test input
             vocab_size = hf_config.vocab_size
-            input_ids = torch.randint(0, vocab_size, (batch_size, seq_len), device=device)
+            input_ids = torch.randint(
+                0, vocab_size, (batch_size, seq_len), device=device
+            )
 
             # Test HuggingFace model
             with torch.no_grad():
@@ -137,8 +146,7 @@ def test_synthetic_model_compatibility(
     device: str = "cpu",
     tolerance: float = 1e-4,
 ) -> bool:
-    """
-    Test compatibility using synthetic model weights.
+    """Test compatibility using synthetic model weights.
 
     Args:
         vocab_size: Vocabulary size
@@ -160,7 +168,13 @@ def test_synthetic_model_compatibility(
     try:
         # Create synthetic Megatron weights and config
         megatron_weights, megatron_config = create_synthetic_megatron_model(
-            vocab_size, hidden_size, num_layers, num_attention_heads, intermediate_size, max_position_embeddings, device
+            vocab_size,
+            hidden_size,
+            num_layers,
+            num_attention_heads,
+            intermediate_size,
+            max_position_embeddings,
+            device,
         )
 
         # Convert weights
@@ -201,7 +215,9 @@ def test_synthetic_model_compatibility(
         # Basic validation
         expected_shape = (batch_size, seq_len, vocab_size)
         if hf_logits.shape != expected_shape:
-            logger.error(f"Output shape mismatch: {hf_logits.shape} != {expected_shape}")
+            logger.error(
+                f"Output shape mismatch: {hf_logits.shape} != {expected_shape}"
+            )
             return False
 
         # Check for NaN or Inf values
@@ -231,9 +247,8 @@ def create_synthetic_megatron_model(
     intermediate_size: int,
     max_position_embeddings: int,
     device: str,
-) -> Tuple[Dict[str, torch.Tensor], Any]:
-    """
-    Create synthetic Megatron model weights and config for testing.
+) -> tuple[dict[str, torch.Tensor], Any]:
+    """Create synthetic Megatron model weights and config for testing.
 
     Args:
         vocab_size: Vocabulary size
@@ -273,20 +288,28 @@ def create_synthetic_megatron_model(
     weights = {}
 
     # Embedding weights
-    weights["embedding.word_embeddings.weight"] = torch.randn(vocab_size, hidden_size, device=device) * 0.02
+    weights["embedding.word_embeddings.weight"] = (
+        torch.randn(vocab_size, hidden_size, device=device) * 0.02
+    )
 
     # Layer weights
     for layer_idx in range(num_layers):
         # Layer norms (initialized to 1)
-        weights[f"decoder.layers.{layer_idx}.input_layernorm.weight"] = torch.ones(hidden_size, device=device)
-        weights[f"decoder.layers.{layer_idx}.post_attention_layernorm.weight"] = torch.ones(hidden_size, device=device)
+        weights[f"decoder.layers.{layer_idx}.input_layernorm.weight"] = torch.ones(
+            hidden_size, device=device
+        )
+        weights[f"decoder.layers.{layer_idx}.post_attention_layernorm.weight"] = (
+            torch.ones(hidden_size, device=device)
+        )
 
         # Attention weights (Xavier initialization)
         weights[f"decoder.layers.{layer_idx}.self_attention.query_key_value.weight"] = (
-            torch.randn(3 * hidden_size, hidden_size, device=device) * (2.0 / (hidden_size + 3 * hidden_size)) ** 0.5
+            torch.randn(3 * hidden_size, hidden_size, device=device)
+            * (2.0 / (hidden_size + 3 * hidden_size)) ** 0.5
         )
         weights[f"decoder.layers.{layer_idx}.self_attention.dense.weight"] = (
-            torch.randn(hidden_size, hidden_size, device=device) * (2.0 / (2 * hidden_size)) ** 0.5
+            torch.randn(hidden_size, hidden_size, device=device)
+            * (2.0 / (2 * hidden_size)) ** 0.5
         )
 
         # MLP weights (Xavier initialization)
@@ -306,14 +329,15 @@ def create_synthetic_megatron_model(
     if config.share_embeddings_and_output_weights:
         weights["output_layer.weight"] = weights["embedding.word_embeddings.weight"]
     else:
-        weights["output_layer.weight"] = torch.randn(vocab_size, hidden_size, device=device) * 0.02
+        weights["output_layer.weight"] = (
+            torch.randn(vocab_size, hidden_size, device=device) * 0.02
+        )
 
     return weights, config
 
 
 def test_component_conversions(device: str = "cpu") -> bool:
-    """
-    Test individual component conversions.
+    """Test individual component conversions.
 
     Args:
         device: Device to run tests on
@@ -383,9 +407,10 @@ def test_component_conversions(device: str = "cpu") -> bool:
     return success
 
 
-def run_all_tests(megatron_checkpoint_path: Optional[str] = None, device: str = "cpu") -> bool:
-    """
-    Run all compatibility tests.
+def run_all_tests(
+    megatron_checkpoint_path: str | None = None, device: str = "cpu"
+) -> bool:
+    """Run all compatibility tests.
 
     Args:
         megatron_checkpoint_path: Path to actual Megatron checkpoint (optional)
@@ -403,7 +428,9 @@ def run_all_tests(megatron_checkpoint_path: Optional[str] = None, device: str = 
         success = False
 
     # Test model compatibility
-    if not test_model_compatibility(megatron_checkpoint_path=megatron_checkpoint_path, device=device):
+    if not test_model_compatibility(
+        megatron_checkpoint_path=megatron_checkpoint_path, device=device
+    ):
         success = False
 
     if success:
@@ -418,17 +445,25 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Test Megatron-HF compatibility")
-    parser.add_argument("--checkpoint", type=str, help="Path to Megatron checkpoint directory")
-    parser.add_argument("--device", type=str, default="cpu", help="Device to run tests on")
+    parser.add_argument(
+        "--checkpoint", type=str, help="Path to Megatron checkpoint directory"
+    )
+    parser.add_argument(
+        "--device", type=str, default="cpu", help="Device to run tests on"
+    )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
 
     # Setup logging
     level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(level=level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.basicConfig(
+        level=level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
 
     # Run tests
-    success = run_all_tests(megatron_checkpoint_path=args.checkpoint, device=args.device)
+    success = run_all_tests(
+        megatron_checkpoint_path=args.checkpoint, device=args.device
+    )
 
     exit(0 if success else 1)

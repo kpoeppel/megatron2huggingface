@@ -1,27 +1,20 @@
-"""
-Embedding components for Megatron models.
-"""
+"""Embedding components for Megatron models."""
 
 import torch
 import torch.nn as nn
-import math
-from typing import Optional, Tuple
 
 
 class MegatronRotaryEmbedding(nn.Module):
-    """
-    Rotary Position Embedding (RoPE) implementation for Megatron models.
-    """
+    """Rotary Position Embedding (RoPE) implementation for Megatron models."""
 
     def __init__(
         self,
         dim: int,
         max_position_embeddings: int = 2048,
         base: float = 10000.0,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ):
-        """
-        Initialize RoPE embeddings.
+        """Initialize RoPE embeddings.
 
         Args:
             dim: Dimension of the embeddings (should be head_dim)
@@ -45,10 +38,10 @@ class MegatronRotaryEmbedding(nn.Module):
             dtype=torch.get_default_dtype(),
         )
 
-    def _set_cos_sin_cache(self, seq_len: int, device: torch.device, dtype: torch.dtype):
-        """
-        Set the cosine and sine cache for the given sequence length.
-        """
+    def _set_cos_sin_cache(
+        self, seq_len: int, device: torch.device, dtype: torch.dtype
+    ):
+        """Set the cosine and sine cache for the given sequence length."""
         self.max_seq_len_cached = seq_len
         t = torch.arange(seq_len, device=device, dtype=self.inv_freq.dtype)
 
@@ -58,9 +51,10 @@ class MegatronRotaryEmbedding(nn.Module):
         self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
         self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
 
-    def forward(self, x: torch.Tensor, seq_len: Optional[int] = None) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Forward pass to get cosine and sine embeddings.
+    def forward(
+        self, x: torch.Tensor, seq_len: int | None = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Forward pass to get cosine and sine embeddings.
 
         Args:
             x: Input tensor (used for device and dtype inference)
@@ -83,9 +77,7 @@ class MegatronRotaryEmbedding(nn.Module):
 
 
 def rotate_half(x: torch.Tensor) -> torch.Tensor:
-    """
-    Rotates half the hidden dims of the input.
-    """
+    """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2 :]
     return torch.cat((-x2, x1), dim=-1)
@@ -93,9 +85,8 @@ def rotate_half(x: torch.Tensor) -> torch.Tensor:
 
 def apply_rotary_pos_emb(
     q: torch.Tensor, k: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-    Apply rotary position embedding to query and key tensors.
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Apply rotary position embedding to query and key tensors.
 
     Args:
         q: Query tensor [batch_size, num_heads, seq_len, head_dim]
@@ -116,19 +107,16 @@ def apply_rotary_pos_emb(
 
 
 class MegatronEmbedding(nn.Module):
-    """
-    Word embedding layer for Megatron models.
-    """
+    """Word embedding layer for Megatron models."""
 
     def __init__(
         self,
         vocab_size: int,
         hidden_size: int,
-        padding_idx: Optional[int] = None,
-        max_norm: Optional[float] = None,
+        padding_idx: int | None = None,
+        max_norm: float | None = None,
     ):
-        """
-        Initialize word embeddings.
+        """Initialize word embeddings.
 
         Args:
             vocab_size: Size of the vocabulary
@@ -154,8 +142,7 @@ class MegatronEmbedding(nn.Module):
                 self.weight[self.padding_idx].fill_(0)
 
     def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass through word embeddings.
+        """Forward pass through word embeddings.
 
         Args:
             input_ids: Input token IDs [batch_size, seq_len]
@@ -163,21 +150,20 @@ class MegatronEmbedding(nn.Module):
         Returns:
             Embedded representations [batch_size, seq_len, hidden_size]
         """
-        return nn.functional.embedding(input_ids, self.weight, self.padding_idx, self.max_norm)
+        return nn.functional.embedding(
+            input_ids, self.weight, self.padding_idx, self.max_norm
+        )
 
 
 class MegatronPositionalEmbedding(nn.Module):
-    """
-    Learned positional embedding layer for Megatron models.
-    """
+    """Learned positional embedding layer for Megatron models."""
 
     def __init__(
         self,
         max_position_embeddings: int,
         hidden_size: int,
     ):
-        """
-        Initialize positional embeddings.
+        """Initialize positional embeddings.
 
         Args:
             max_position_embeddings: Maximum number of positions
@@ -195,8 +181,7 @@ class MegatronPositionalEmbedding(nn.Module):
         nn.init.normal_(self.weight, mean=0.0, std=0.02)
 
     def forward(self, position_ids: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass through positional embeddings.
+        """Forward pass through positional embeddings.
 
         Args:
             position_ids: Position IDs [batch_size, seq_len]
@@ -212,9 +197,8 @@ def get_position_embedding(
     hidden_size: int,
     max_position_embeddings: int = 2048,
     rope_theta: float = 10000.0,
-) -> Optional[nn.Module]:
-    """
-    Factory function to get the appropriate position embedding.
+) -> nn.Module | None:
+    """Factory function to get the appropriate position embedding.
 
     Args:
         position_embedding_type: Type of position embedding ("rope", "learned", or "none")
@@ -234,4 +218,6 @@ def get_position_embedding(
     elif position_embedding_type.lower() == "none":
         return None
     else:
-        raise ValueError(f"Unsupported position embedding type: {position_embedding_type}")
+        raise ValueError(
+            f"Unsupported position embedding type: {position_embedding_type}"
+        )

@@ -1,9 +1,8 @@
-"""
-Megatron-style decoder layer implementation for HuggingFace compatibility.
-This is a 1:1 translation of Megatron's transformer layer without tensor parallelism.
-"""
+"""Megatron-style decoder layer implementation for HuggingFace compatibility.
 
-from typing import Optional, Tuple, Union
+This is a 1:1 translation of Megatron's transformer layer without tensor
+parallelism.
+"""
 
 import torch
 import torch.nn as nn
@@ -68,12 +67,12 @@ class TransformerLayer(nn.Module):
     def forward(
         self,
         hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        rotary_pos_emb: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]] = None,
-        attention_bias: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
-        """
-        Forward pass through the transformer layer following Megatron's structure.
+        attention_mask: torch.Tensor | None = None,
+        rotary_pos_emb: torch.Tensor | tuple[torch.Tensor, torch.Tensor] | None = None,
+        attention_bias: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
+        """Forward pass through the transformer layer following Megatron's
+        structure.
 
         Args:
             hidden_states: [seq_len, batch, hidden_size]
@@ -89,7 +88,7 @@ class TransformerLayer(nn.Module):
         layernorm_output = self.input_layernorm(hidden_states)
 
         # Self attention.
-        attention_output, attention_bias = self.self_attention(
+        attention_output, attention_bias, present_key_value = self.self_attention(
             layernorm_output,
             attention_mask=attention_mask,
             rotary_pos_emb=rotary_pos_emb,
@@ -105,22 +104,20 @@ class TransformerLayer(nn.Module):
         layernorm_output = self.post_attention_layernorm(layernorm_input)
 
         # MLP.
-        mlp_output, mlp_bias = self.mlp(layernorm_output)
-
-        # Second residual connection.
-        if mlp_bias is not None:
-            mlp_output = mlp_output + mlp_bias
+        mlp_output = self.mlp(layernorm_output, skip_add_bias=True)
 
         output = layernorm_input + mlp_output
 
         # Return output and bias (bias is None if add_bias_linear=False)
-        return output, None
+        return output, None, present_key_value
 
 
 class ParallelTransformerLayer(TransformerLayer):
-    """
-    Alias for TransformerLayer to maintain compatibility with Megatron naming.
-    In actual Megatron, this would handle tensor parallelism, but we don't need that for inference.
+    """Alias for TransformerLayer to maintain compatibility with Megatron
+    naming.
+
+    In actual Megatron, this would handle tensor parallelism, but we
+    don't need that for inference.
     """
 
     pass

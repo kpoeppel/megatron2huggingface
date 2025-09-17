@@ -1,26 +1,61 @@
 import argparse
-import json
-from typing import Any, Type
+from typing import Any
 
 from megatron.training.arguments import add_megatron_arguments
 
 
 def get_megatron_parser():
-    """
-    Extracts the arguments from megatron.training.arguments.py.
-    """
-    parser = argparse.ArgumentParser(description="Megatron-LM Arguments", allow_abbrev=False)
+    """Extracts the arguments from megatron.training.arguments.py."""
+    parser = argparse.ArgumentParser(
+        description="Megatron-LM Arguments", allow_abbrev=False
+    )
     parser = add_megatron_arguments(parser)
     return parser
+
+
+def _extract_action_type(action: argparse.Action):
+    typ = (
+        bool
+        if isinstance(action, argparse._StoreTrueAction | argparse._StoreFalseAction)
+        else action.type
+    )
+    if action.nargs == "+" or action.nargs == "*":
+        if typ is None:
+            return list[str]
+        else:
+            return list[typ]
+    else:
+        return typ
+
+
+def get_choices_arg(
+    parser: argparse.ArgumentParser,
+    arg: str,
+):
+    for action in parser._actions:
+        if action.dest == arg:
+            if action.choices:
+                return action.choices
+    return None
+
+
+def get_help(
+    parser: argparse.ArgumentParser,
+    arg: str,
+):
+    for action in parser._actions:
+        if action.dest == arg:
+            if action.help:
+                return action.help
+    return ""
 
 
 def get_args_and_types(
     parser: argparse.ArgumentParser,
     exclude_args: list[str] | None = None,
     override_defaults: dict[str, Any] | None = None,
-) -> dict[str, tuple[Type, Any]]:
-    """
-    Generates a configuration dictionary from the given arguments.
+) -> dict[str, tuple[type, Any]]:
+    """Generates a configuration dictionary from the given arguments.
 
     Args:
         args: The parsed arguments from argparse.
@@ -37,8 +72,7 @@ def get_args_and_types(
     override_defaults = override_defaults or {}
 
     arg_types = {
-        arg.dest: (bool if isinstance(arg, argparse._StoreTrueAction | argparse._StoreFalseAction) else arg.type)
-        for arg in parser._actions
+        action.dest: _extract_action_type(action) for action in parser._actions
     }
 
     for arg in vars(args):
@@ -52,17 +86,37 @@ def get_args_and_types(
     return config
 
 
-def _generate_docstring(args: dict[str, tuple[Type, Any]], offset="        ", suboffset="    "):
+def split_line(offset, line, max_line=120):
+    lines = []
+    while len(offset + line) > max_line:
+        line_sub = line.split(" ")
+        cum_length = len(offset + line_sub[0])
+        idx = 0
+        while cum_length < max_line or idx - 1 > len(line_sub):
+            cum_length += 1 + len(line_sub[idx + 1])
+            idx += 1
+        lines += [offset + " ".join(line_sub[: idx - 1])]
+        line = " ".join(line_sub[idx - 1 :])
+    return lines + [offset + line]
+
+
+def _generate_docstring(
+    args: dict[str, tuple[type, Any]],
+    args_help: dict[str, str] = {},
+    offset="        ",
+    suboffset="    ",
+):
     lines = []
 
-    def typestr(argtype: Type):
+    def typestr(argtype: type):
         st = str(argtype)
         if "<class " in st:
-            return "`" + st[8:-2] + "`"
+            st = st[8:-2]
         if "<" in st:
-            return "Any"
-
-        return st
+            st = "Any"
+        if st == "None":
+            st = "str"
+        return "`" + st + "`"
 
     def valstr(val: Any) -> str:
         if isinstance(val, str):
@@ -77,15 +131,23 @@ def _generate_docstring(args: dict[str, tuple[Type, Any]], offset="        ", su
             + arg
             + " ("
             + typestr(argtype=argtype)
-            + ((", *optional*, defaults to " + valstr(default)) if default is not None else "")
+            + (
+                (", *optional*, defaults to " + valstr(default))
+                if default is not None
+                else ""
+            )
             + "):"
         )
-        lines.append(offset + suboffset + f"Argument {arg}.")
+        lines += split_line(
+            offset + suboffset,
+            f"Argument {arg}."
+            + ((" " + args_help[arg]) if arg in args_help and args_help[arg] else ""),
+        )
     return "\n".join(lines)
 
 
-def _generate_kwargs(args: dict[str, tuple[Type, Any]], offset="        "):
-    def typestr(argtype: Type):
+def _generate_kwargs(args: dict[str, tuple[type, Any]], offset="        "):
+    def typestr(argtype: type):
         st = str(argtype)
         if "<class " in st:
             return st[8:-2]
@@ -107,8 +169,8 @@ def _generate_kwargs(args: dict[str, tuple[Type, Any]], offset="        "):
     return "\n".join(lines)
 
 
-def _generate_assigments(args: dict[str, tuple[Type, Any]], offset="        "):
-    def typestr(argtype: Type):
+def _generate_assigments(args: dict[str, tuple[type, Any]], offset="        "):
+    def typestr(argtype: type):
         st = str(argtype)
         if "<class " in st:
             return st[8:-2]
@@ -123,14 +185,15 @@ def _generate_assigments(args: dict[str, tuple[Type, Any]], offset="        "):
 
 
 def generate_config(
-    args: dict[str, tuple[Type, Any]],
+    args: dict[str, tuple[type, Any]],
+    parser: argparse.ArgumentParser,
     class_name: str = "MegatronConfig",
     base_class_name: str = "PretrainedConfig",
-    template: str = '''"""Megatron model configuration - generated from megatron2hugginface"""
+    template: str = '''"""Megatron model configuration - generated from megatron2huggingface"""
 
 from typing import Any
 
-from ...configuration_utils import {base_class_name}
+from transformers.configuration_utils import {base_class_name}
 
 {main}
 
@@ -145,7 +208,9 @@ __all__ = ["{class_name}"]
 
     Args:
 '''.replace("{class_name}", class_name).replace("{base_class_name}", base_class_name)
-        + _generate_docstring(args)
+        + _generate_docstring(
+            args, args_help={arg: get_help(arg=arg, parser=parser) for arg in args}
+        )
         + '''
     """
     def __init__(
@@ -174,7 +239,9 @@ __all__ = ["{class_name}"]
     )
 
 
-def generate_megatron_configuration_huggingface(out_file: str = "configuration_megatron.py"):
+def generate_megatron_configuration_huggingface(
+    out_file: str = "configuration_megatron.py",
+):
     parser = get_megatron_parser()
     args = get_args_and_types(parser, exclude_args={}, override_defaults={})
     args["attention_backend"] = (str, "default")
@@ -182,8 +249,16 @@ def generate_megatron_configuration_huggingface(out_file: str = "configuration_m
     args["bos_token_id"] = (int, 0)
     args["eos_token_id"] = (int, 0)
     args["use_cache"] = (bool, True)
-    args["tie_word_embeddings"] = (bool, not args["untie_embeddings_and_output_weights"])
-    cfg_file_py = generate_config(args, class_name="MegatronConfig", base_class_name="PretrainedConfig")
+    args["tie_word_embeddings"] = (
+        bool,
+        not args["untie_embeddings_and_output_weights"],
+    )
+    cfg_file_py = generate_config(
+        args,
+        parser=parser,
+        class_name="MegatronConfig",
+        base_class_name="PretrainedConfig",
+    )
 
     with open(out_file, "w") as fp:
         fp.write(cfg_file_py)

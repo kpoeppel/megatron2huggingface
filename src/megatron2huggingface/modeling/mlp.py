@@ -1,9 +1,8 @@
-"""
-Megatron-style MLP implementation for HuggingFace compatibility.
-This is a 1:1 translation of Megatron's MLP module without tensor parallelism.
-"""
+"""Megatron-style MLP implementation for HuggingFace compatibility.
 
-from typing import Optional, Tuple
+This is a 1:1 translation of Megatron's MLP module without tensor
+parallelism.
+"""
 
 import torch
 import torch.nn as nn
@@ -12,6 +11,7 @@ from transformers.activations import ACT2FN
 from transformers.utils import logging
 
 from ..configuration_megatron import MegatronConfig
+from .layer_norm import LinearLayerNorm
 
 logger = logging.get_logger(__name__)
 
@@ -29,7 +29,7 @@ class MLP(nn.Module):
     If config.add_bias_linear is False, the bias returned is None.
     """
 
-    def __init__(self, config: MegatronConfig, input_size: Optional[int] = None):
+    def __init__(self, config: MegatronConfig, input_size: int | None = None):
         super().__init__()
         self.config = config
 
@@ -37,15 +37,16 @@ class MLP(nn.Module):
         self.input_size = input_size if input_size is not None else config.hidden_size
 
         # FFN hidden size
-        ffn_hidden_size = getattr(config, "ffn_hidden_size", 4 * config.hidden_size)
-
-        # If this is a gated linear unit we double the output width
-        # see https://arxiv.org/pdf/2002.05202.pdf
-        if getattr(config, "gated_linear_unit", False):
-            ffn_hidden_size *= 2
+        ffn_hidden_size = config.ffn_hidden_size
 
         # First linear layer - Megatron naming
-        self.linear_fc1 = nn.Linear(self.input_size, ffn_hidden_size, bias=getattr(config, "add_bias_linear", True))
+        self.linear_fc1 = LinearLayerNorm(
+            self.input_size,
+            ffn_hidden_size * 2 if config.gated_linear_unit else ffn_hidden_size,
+            bias=config.add_bias_linear,
+            ln_bias=config.add_bias_linear,
+            norm_type=config.normalization,
+        )
 
         # Activation function
         if hasattr(config, "activation_function"):
@@ -59,7 +60,7 @@ class MLP(nn.Module):
 
         # Second linear layer - Megatron naming
         self.linear_fc2 = nn.Linear(
-            getattr(config, "ffn_hidden_size", 4 * config.hidden_size),
+            ffn_hidden_size,
             config.hidden_size,
             bias=getattr(config, "add_bias_linear", True),
         )
@@ -67,9 +68,10 @@ class MLP(nn.Module):
         # Dropout
         self.dropout = nn.Dropout(getattr(config, "hidden_dropout", 0.0))
 
-    def forward(self, hidden_states: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
-        """
-        Forward pass through the MLP block following Megatron's structure.
+    def forward(
+        self, hidden_states: torch.Tensor, skip_add_bias: bool = True
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
+        """Forward pass through the MLP block following Megatron's structure.
 
         Args:
             hidden_states: [seq_len, batch, hidden_size]
@@ -104,16 +106,20 @@ class MLP(nn.Module):
         if hasattr(self.linear_fc2, "bias") and self.linear_fc2.bias is not None:
             bias = self.linear_fc2.bias
 
-        return output, bias
+        if not skip_add_bias:
+            return output, bias
+        else:
+            return output
 
 
 class SwiGLUMLP(MLP):
-    """
-    SwiGLU MLP variant following Megatron's structure.
-    This is a specialized version that explicitly uses SwiGLU activation.
+    """SwiGLU MLP variant following Megatron's structure.
+
+    This is a specialized version that explicitly uses SwiGLU
+    activation.
     """
 
-    def __init__(self, config: MegatronConfig, input_size: Optional[int] = None):
+    def __init__(self, config: MegatronConfig, input_size: int | None = None):
         # Force gated linear unit and SiLU activation for SwiGLU
         config_copy = config.__class__(**config.__dict__)
         config_copy.gated_linear_unit = True
@@ -121,7 +127,9 @@ class SwiGLUMLP(MLP):
 
         super().__init__(config_copy, input_size)
 
-    def forward(self, hidden_states: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    def forward(
+        self, hidden_states: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
         """
         SwiGLU forward pass: SwiGLU(x) = Swish(xW1) ⊙ (xW2)
         where ⊙ denotes element-wise multiplication.
@@ -150,12 +158,12 @@ class SwiGLUMLP(MLP):
 
 
 class GeGLUMLP(MLP):
-    """
-    GeGLU MLP variant following Megatron's structure.
+    """GeGLU MLP variant following Megatron's structure.
+
     This is a specialized version that explicitly uses GeGLU activation.
     """
 
-    def __init__(self, config: MegatronConfig, input_size: Optional[int] = None):
+    def __init__(self, config: MegatronConfig, input_size: int | None = None):
         # Force gated linear unit and GeLU activation for GeGLU
         config_copy = config.__class__(**config.__dict__)
         config_copy.gated_linear_unit = True
@@ -163,7 +171,9 @@ class GeGLUMLP(MLP):
 
         super().__init__(config_copy, input_size)
 
-    def forward(self, hidden_states: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    def forward(
+        self, hidden_states: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
         """
         GeGLU forward pass: GeGLU(x) = GELU(xW1) ⊙ (xW2)
         where ⊙ denotes element-wise multiplication.
