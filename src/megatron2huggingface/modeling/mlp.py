@@ -42,7 +42,7 @@ class MLP(nn.Module):
         # First linear layer - Megatron naming
         self.linear_fc1 = LinearLayerNorm(
             self.input_size,
-            ffn_hidden_size * 2 if config.gated_linear_unit else ffn_hidden_size,
+            ffn_hidden_size * 2 if config.swiglu else ffn_hidden_size,
             bias=config.add_bias_linear,
             ln_bias=config.add_bias_linear,
             norm_type=config.normalization,
@@ -84,7 +84,7 @@ class MLP(nn.Module):
         intermediate_parallel = self.linear_fc1(hidden_states)
 
         # Handle gated linear unit (SwiGLU, GeGLU, etc.)
-        if getattr(self.config, "gated_linear_unit", False):
+        if getattr(self.config, "swiglu", False):
             # Split the intermediate representation in half for gating
             def glu(x):
                 x = torch.chunk(x, 2, dim=-1)
@@ -122,7 +122,7 @@ class SwiGLUMLP(MLP):
     def __init__(self, config: MegatronConfig, input_size: int | None = None):
         # Force gated linear unit and SiLU activation for SwiGLU
         config_copy = config.__class__(**config.__dict__)
-        config_copy.gated_linear_unit = True
+        config_copy.swiglu = True
         config_copy.activation_function = "silu"
 
         super().__init__(config_copy, input_size)
@@ -166,7 +166,7 @@ class GeGLUMLP(MLP):
     def __init__(self, config: MegatronConfig, input_size: int | None = None):
         # Force gated linear unit and GeLU activation for GeGLU
         config_copy = config.__class__(**config.__dict__)
-        config_copy.gated_linear_unit = True
+        config_copy.swiglu = True
         config_copy.activation_function = "gelu"
 
         super().__init__(config_copy, input_size)

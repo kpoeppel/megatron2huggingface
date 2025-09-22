@@ -10,7 +10,7 @@ def test_mlp_conversion(
     megatron_config_filled_dict,
     hidden_size: int = 512,
     ffn_hidden_size: int | None = None,
-    gated_linear_unit: bool = False,
+    swiglu: bool = False,
     activation_function: str = "gelu",
     batch_size: int = 2,
     seq_len: int = 10,
@@ -31,7 +31,7 @@ def test_mlp_conversion(
         dict(
             hidden_size=hidden_size,
             ffn_hidden_size=ffn_hidden_size,
-            gated_linear_unit=gated_linear_unit,
+            swiglu=swiglu,
             activation_function=activation_function,
             add_bias_linear=True,
             hidden_dropout=0.0,
@@ -59,7 +59,7 @@ def test_mlp_conversion(
     # Strict filtered load-state check to catch missing/unexpected keys early
     converted = converter.convert_weights(megatron_state)
     hf_module = converter.create_hf_module(hf_config).to(device)
-    missing, unexpected = hf_module.load_state_dict(converted, strict=False)
+    missing, unexpected = hf_module.load(converted, strict=False)
     assert not missing and not unexpected
 
     results = converter.test_conversion(

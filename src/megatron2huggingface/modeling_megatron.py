@@ -131,18 +131,6 @@ class MegatronDecoderLayer(nn.Module):
         self.self_attn = SelfAttention(config=config)
         self.mlp = MLP(config=config)
 
-        # # Layer normalization
-        # if config.normalization == "LayerNorm":
-        #     self.input_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
-        #     self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
-        # elif config.normalization == "RMSNorm":
-        #     from transformers.models.llama.modeling_llama import LlamaRMSNorm
-
-        #     self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.norm_epsilon)
-        #     self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.norm_epsilon)
-        # else:
-        #     raise ValueError(f"Unsupported normalization: {config.normalization}")
-
     def forward(
         self,
         hidden_states: torch.Tensor,

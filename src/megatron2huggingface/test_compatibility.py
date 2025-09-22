@@ -200,7 +200,7 @@ def test_synthetic_model_compatibility(
 
         # Create HuggingFace model
         hf_model = MegatronForCausalLM(hf_config)
-        hf_model.load_state_dict(hf_weights, strict=False)
+        hf_model.load(hf_weights, strict=False)
         hf_model.to(device)
         hf_model.eval()
 

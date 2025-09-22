@@ -29,7 +29,7 @@ def test_modular_decoder_layer(device: str = "cpu", debug: bool = False):
         add_qkv_bias=False,
         qk_layernorm=False,
         layernorm_epsilon=1e-5,
-        gated_linear_unit=True,
+        swiglu=True,
         activation_function="silu",
     )
 
@@ -75,7 +75,7 @@ def test_full_model_conversion(
             tie_word_embeddings=False,
             normalization="RMSNorm",
             activation_function="silu",
-            gated_linear_unit=True,
+            swiglu=True,
             add_bias_linear=True,
         )
     )
@@ -101,7 +101,7 @@ def test_full_model_conversion(
     # Load converted weights (filter to matching keys)
     converted = converter.convert_weights(megatron_state)
     hf_module = converter.create_hf_module().to(device)
-    missing, unexpected = hf_module.load_state_dict(converted, strict=False)
+    missing, unexpected = hf_module.load(converted, strict=False)
     assert not missing and not unexpected
 
     # Compare parameter counts

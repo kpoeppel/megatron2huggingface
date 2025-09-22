@@ -181,7 +181,9 @@ class SelfAttention(nn.Module):
 
         # Output projection - Megatron naming
         self.linear_proj = nn.Linear(
-            self.query_projection_size, self.hidden_size, bias=False
+            self.query_projection_size,
+            self.hidden_size,
+            bias=config.add_bias_linear,
         )
 
         # Optional Q/K layer norms (for stability)
