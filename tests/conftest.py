@@ -27,6 +27,7 @@ def _megatron_config_filled():
             "tokenizer_model": "EleutherAI/gpt-neox-20b",
             "tokenizer_type": "HuggingFaceTokenizer",
             "data_parallel_size": 1,
+            "group_query_attention": True,
         }
     )
 

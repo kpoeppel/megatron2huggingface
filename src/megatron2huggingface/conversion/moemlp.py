@@ -80,16 +80,32 @@ class MoeMLPConverter(BaseConverter):
             logger.debug(f"Converted {k} -> {dst_key}: {tuple(v.shape)}")
 
         if not found_any_expert:
+            expert_key_regex = re.compile(
+                r"^experts.local_experts\.(\d+)\.(linear_fc1|linear_fc2)\.weight"
+            )
+
+            found_any_expert = False
+            for k, v in megatron_state.items():
+                m = expert_key_regex.match(k)
+                if m is None:
+                    logger.debug(f"Non-matched parameter: {k}")
+                    continue
+                idx, fc = m.groups()
+                dst_key = f"experts.experts.{idx}.{fc}.weight"
+                hf_state[dst_key] = v
+                found_any_expert = True
+                logger.debug(f"Converted {k} -> {dst_key}: {tuple(v.shape)}")
+
+        if not found_any_expert:
             logger.warning(
                 "No sequential experts found under experts.experts.* in input state."
             )
 
         return hf_state
 
-    def create_hf_module(
-        self, config: MegatronConfig, layer_idx: int = 0, **kwargs
-    ) -> MoeMLP:
+    def create_hf_module(self, layer_idx: int = 0, **kwargs) -> MoeMLP:
         """Create a HuggingFace-compatible MoeMLP module."""
+        config = MegatronConfig(**self.megatron_config)
         return MoeMLP(config)
 
     def create_megatron_module(self, layer_idx: int = 0, **kwargs):
@@ -105,21 +121,14 @@ class MoeMLPConverter(BaseConverter):
         )
 
         # Build Megatron-Core TransformerConfig from our stored config dict
-        cfg = megatron2transformer_config(self.megatron_config)
+        transformer_config = megatron2transformer_config(self.megatron_config)
 
         # Get a TE-backed GPT layer spec with MoE enabled
         layer_spec = get_gpt_decoder_block_spec(
-            num_experts=getattr(cfg, "num_moe_experts", None),
-            moe_grouped_gemm=getattr(cfg, "moe_grouped_gemm", False),
-            qk_layernorm=getattr(cfg, "qk_layernorm", False),
-            multi_latent_attention=getattr(cfg, "multi_latent_attention", False),
-            moe_use_legacy_grouped_gemm=getattr(
-                cfg, "moe_use_legacy_grouped_gemm", False
-            ),
-            qk_l2_norm=getattr(cfg, "qk_l2_norm", False),
-            use_kitchen=getattr(cfg, "use_kitchen", False),
-            gated_linear_unit=getattr(cfg, "swiglu", True),
-        )
+            transformer_config,
+            use_transformer_engine=True,
+            normalization=self.megatron_config["normalization"],
+        ).layer_specs[0]
 
         # Extract the MoE MLP ModuleSpec and instantiate the actual module
         moe_mlp_spec = layer_spec.submodules.mlp  # ModuleSpec for MoE MLP (MoELayer)
@@ -127,4 +136,4 @@ class MoeMLPConverter(BaseConverter):
         moe_submodules = (
             moe_mlp_spec.submodules
         )  # MoESubmodules for experts/shared_experts
-        return moe_module_cls(config=cfg, submodules=moe_submodules)
+        return moe_module_cls(config=transformer_config, submodules=moe_submodules)

@@ -3,7 +3,6 @@
 import torch
 
 from megatron2huggingface.conversion.mlp import MLPConverter
-from megatron2huggingface.configuration_megatron import MegatronConfig
 
 
 def test_mlp_conversion(
@@ -47,8 +46,6 @@ def test_mlp_conversion(
     for k in megatron_state:
         megatron_state[k] = 0.0 * megatron_state[k]
 
-    hf_config = MegatronConfig(**cfg)
-
     # Inputs: for MLP we follow Megatron format [seq_len, batch, hidden]
     test_input = torch.arange(
         hidden_size, dtype=torch.float32, device=device
@@ -58,13 +55,12 @@ def test_mlp_conversion(
 
     # Strict filtered load-state check to catch missing/unexpected keys early
     converted = converter.convert_weights(megatron_state)
-    hf_module = converter.create_hf_module(hf_config).to(device)
+    hf_module = converter.create_hf_module().to(device)
     missing, unexpected = hf_module.load_state_dict(converted, strict=False)
     assert not missing and not unexpected
 
     results = converter.test_conversion(
         megatron_state=megatron_state,
-        hf_config=hf_config,
         test_input=test_input,
         additional_input={"skip_bias_add": True},
     )

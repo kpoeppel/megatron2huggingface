@@ -42,12 +42,12 @@ def test_modular_decoder_layer(device: str = "cpu", debug: bool = False):
 def test_full_model_conversion(
     megatron_config_filled_dict,
     vocab_size: int = 1000,
-    hidden_size: int = 512,
-    num_layers: int = 2,
-    num_attention_heads: int = 8,
-    intermediate_size: int = 1024,
+    hidden_size: int = 256,
+    num_layers: int = 1,
+    num_attention_heads: int = 2,
+    intermediate_size: int = 256,
     max_position_embeddings: int = 128,
-    batch_size: int = 2,
+    batch_size: int = 3,
     seq_len: int = 10,
     device: str = "cuda",
 ) -> bool:
@@ -68,6 +68,8 @@ def test_full_model_conversion(
             num_attention_heads=num_attention_heads,
             ffn_hidden_size=intermediate_size,
             max_position_embeddings=max_position_embeddings,
+            num_kv_channels=hidden_size // num_attention_heads,
+            kv_channels=hidden_size // num_attention_heads,
             num_query_groups=num_attention_heads,
             rms_norm_eps=1e-6,
             attention_dropout=0.0,
@@ -114,5 +116,22 @@ def test_full_model_conversion(
     with torch.no_grad():
         outputs = translated_model(input_ids)
     logits = outputs.logits if hasattr(outputs, "logits") else outputs
+
+    results = converter.test_conversion(
+        megatron_state=megatron_state,
+        test_input=input_ids,
+        atol=1e-3,
+        rtol=1e-2,
+        additional_inputs={
+            "attention_mask": None,
+            "position_ids": torch.arange(input_ids.shape[1], device=input_ids.device)[
+                None, :
+            ].broadcast_to(input_ids.shape),
+        },
+        hf_output_conversion=lambda x: x.logits,
+    )
+
+    print(results)
+    assert results["test_passed"]
+
     assert logits.shape == (batch_size, seq_len, vocab_size)
-    return True

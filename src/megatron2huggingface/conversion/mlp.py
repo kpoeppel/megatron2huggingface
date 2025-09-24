@@ -94,11 +94,10 @@ class MLPConverter(BaseConverter):
             hf_state["linear_fc2.bias"] = megatron_state[fc2_bias_key]
             logger.debug(f"Converted FC2 bias: {megatron_state[fc2_bias_key].shape}")
 
-    def create_hf_module(
-        self, config: MegatronConfig, layer_idx: int = 0, **kwargs
-    ) -> MLP:
+    def create_hf_module(self, layer_idx: int = 0, **kwargs) -> MLP:
         """Create a HuggingFace-compatible MLP module using our Megatron-style
         implementation."""
+        config = MegatronConfig(**self.megatron_config)
         return MLP(config)
 
     def create_megatron_module(self, layer_idx: int = 0, **kwargs):
@@ -109,9 +108,17 @@ class MLPConverter(BaseConverter):
         from megatron2huggingface.conversion.config import megatron2transformer_config
 
         # Build TransformerConfig from our dict
-        cfg = megatron2transformer_config(self.megatron_config)
+        transformer_config = megatron2transformer_config(self.megatron_config)
 
-        submodules = get_gpt_decoder_block_spec().submodules.mlp.submodules
+        submodules = (
+            get_gpt_decoder_block_spec(
+                transformer_config,
+                use_transformer_engine=True,
+                normalization=self.megatron_config["normalization"],
+            )
+            .layer_specs[0]
+            .submodules.mlp.submodules
+        )
 
         # Instantiate Megatron MLP with correct signature
         # - config: TransformerConfig
@@ -119,7 +126,9 @@ class MLPConverter(BaseConverter):
         # - is_expert: False (standard dense MLP)
         # - input_size: optional; let it default to config.hidden_size
         # - ffn_hidden_size: optional; let MLP derive from config.ffn_hidden_size
-        return MegatronMLP(config=cfg, submodules=submodules, is_expert=False)
+        return MegatronMLP(
+            config=transformer_config, submodules=submodules, is_expert=False
+        )
 
     # def get_expected_keys(self, config, layer_idx: int | None = None):
     #     """

@@ -3,14 +3,13 @@
 import torch
 
 from megatron2huggingface.conversion.embedding import EmbeddingConverter
-from megatron2huggingface.configuration_megatron import MegatronConfig
 
 
 def test_embedding_conversion(
     megatron_config_filled_dict,
     vocab_size: int = 32000,
     hidden_size: int = 4096,
-    max_position_embeddings: int | None = None,
+    max_position_embeddings: int = 16384,
     batch_size: int = 2,
     seq_len: int = 10,
     device: str = "cpu",
@@ -49,7 +48,6 @@ def test_embedding_conversion(
 
     # Converter and HF config
     converter = EmbeddingConverter(cfg)
-    hf_config = MegatronConfig(**cfg)
 
     # Inputs
     input_ids = torch.randint(0, vocab_size, (batch_size, seq_len), device=device)
@@ -63,7 +61,6 @@ def test_embedding_conversion(
     # Use the common converter test harness to compare Megatron vs HF implementations
     results = converter.test_conversion(
         megatron_state=megatron_state,
-        hf_config=hf_config,
         test_input=input_ids,
         additional_inputs=additional,
         permute_megatron_output=(1, 0, 2),

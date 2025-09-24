@@ -14,10 +14,9 @@ def test_modular_attention(
     """Test the modular Attention components."""
 
     from megatron2huggingface.modeling.attention import SelfAttention
-    from megatron2huggingface.configuration_megatron import MegatronConfig
     import torch
 
-    hidden_size = 512
+    hidden_size = 128
     seq_len = 10
     batch_size = 2
 
@@ -80,14 +79,12 @@ def test_attention_conversion(
             "num_query_groups": num_key_value_heads,
             "add_bias_linear": False,
             "normalization": "RMSNorm",
+            "group_query_attention": True,
         }
     )
 
     # Create converter
     converter = AttentionConverter(megatron_config)
-
-    # Create HuggingFace config
-    hf_config = MegatronConfig(**megatron_config)
 
     megatron_module = converter.create_megatron_module()
     megatron_state = megatron_module.state_dict()
@@ -99,14 +96,13 @@ def test_attention_conversion(
 
     # Strict filtered load-state check to catch missing/unexpected keys early
     converted = converter.convert_weights(megatron_state)
-    hf_module = converter.create_hf_module(hf_config).to(device)
+    hf_module = converter.create_hf_module().to(device)
     missing, unexpected = hf_module.load_state_dict(converted, strict=False)
     assert not missing and not unexpected
 
     # Test conversion
     results = converter.test_conversion(
         megatron_state=megatron_state,
-        hf_config=hf_config,
         test_input=test_input,
         additional_inputs={"attention_mask": None},
         atol=1e-3,

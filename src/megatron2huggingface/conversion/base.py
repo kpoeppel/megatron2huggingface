@@ -285,6 +285,10 @@ class MegatronCheckpointLoader:
             return {}
 
 
+def _identity(x: Any) -> Any:
+    return x
+
+
 class BaseConverter:
     """Base class for component converters."""
 
@@ -337,13 +341,13 @@ class BaseConverter:
     def test_conversion(
         self,
         megatron_state: dict[str, torch.Tensor],
-        hf_config,
         test_input: torch.Tensor,
         additional_inputs: dict[str, Any] = {},
         assert_error: bool = True,
         atol: float = 1e-3,
         rtol: float = 1e-3,
         permute_megatron_output: list[int] | None = None,
+        hf_output_conversion: Callable[[Any], Any] = _identity,
         **kwargs,
     ) -> dict[str, Any]:
         """Test the conversion by comparing outputs of Megatron and HuggingFace
@@ -362,9 +366,7 @@ class BaseConverter:
         hf_weights = self.convert_weights(megatron_state, **kwargs)
 
         # Create modules
-        hf_module = self.create_hf_module(hf_config, **kwargs).to(
-            device=test_input.device
-        )
+        hf_module = self.create_hf_module(**kwargs).to(device=test_input.device)
 
         megatron_module = self.create_megatron_module(**kwargs).to(
             device=test_input.device
@@ -384,6 +386,8 @@ class BaseConverter:
         with torch.no_grad():
             hf_output = hf_module(test_input, **additional_inputs)
             megatron_output = megatron_module(test_input, **additional_inputs)
+
+        hf_output = hf_output_conversion(hf_output)
 
         # Compare outputs
         if isinstance(hf_output, tuple):

@@ -8,6 +8,7 @@ import torch
 from typing import Any
 
 from megatron2huggingface.conversion.base import BaseConverter
+from megatron2huggingface.configuration_megatron import MegatronConfig
 
 logger = logging.getLogger(__name__)
 
@@ -90,13 +91,14 @@ class LayerNormConverter(BaseConverter):
         norm_module = build_module(norm_spec, hidden_size, config=cfg)
         return norm_module
 
-    def create_hf_module(self, config: Any, **kwargs):
+    def create_hf_module(self, **kwargs):
         """Instantiate the HF-side norm module matching Megatron semantics."""
         from megatron2huggingface.modeling.layer_norm import (
             RMSNorm as HF_RMSNorm,
             LayerNorm as HF_LayerNorm,
         )
 
+        config = MegatronConfig(**self.megatron_config)
         normalization = getattr(config, "normalization", "LayerNorm")
         eps = (
             getattr(config, "rms_norm_eps", None)
@@ -249,10 +251,11 @@ class LinearLayerNormConverter(BaseConverter):
         module = build_module(linear_norm_spec, hidden_size, out_size, config=cfg)
         return module
 
-    def create_hf_module(self, config: Any, **kwargs):
+    def create_hf_module(self, **kwargs):
         """Instantiate the HF-side norm module matching Megatron semantics."""
         from megatron2huggingface.modeling.layer_norm import LinearLayerNorm
 
+        config = MegatronConfig(**self.megatron_config)
         normalization = getattr(config, "normalization", "LayerNorm")
         eps = (
             getattr(config, "rms_norm_eps", None)

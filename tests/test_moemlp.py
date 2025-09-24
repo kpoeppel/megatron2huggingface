@@ -2,8 +2,7 @@
 
 import torch
 
-from megatron2huggingface.conversion.moemlp import MoEMLPConverter
-from megatron2huggingface.configuration_megatron import MegatronConfig
+from megatron2huggingface.conversion.moemlp import MoeMLPConverter
 
 
 def test_moemlp_conversion(
@@ -41,7 +40,7 @@ def test_moemlp_conversion(
         )
     )
 
-    converter = MoEMLPConverter(cfg)
+    converter = MoeMLPConverter(cfg)
 
     # Create Megatron-Core module and pull its weights
     megatron_module = converter.create_megatron_module()
@@ -53,8 +52,6 @@ def test_moemlp_conversion(
     for k in megatron_state:
         megatron_state[k] = 0.0 * megatron_state[k]
 
-    hf_config = MegatronConfig(**cfg)
-
     # Inputs follow Megatron format [seq_len, batch, hidden]
     test_input = torch.arange(
         hidden_size, dtype=torch.float32, device=device
@@ -62,7 +59,7 @@ def test_moemlp_conversion(
 
     # Early strict filtered load-state check on HF side
     converted = converter.convert_weights(megatron_state)
-    hf_module = converter.create_hf_module(hf_config).to(device)
+    hf_module = converter.create_hf_module().to(device)
     missing, unexpected = hf_module.load_state_dict(converted, strict=False)
     assert not missing and not unexpected
 
@@ -71,7 +68,6 @@ def test_moemlp_conversion(
     # by the base tester (avoids forwarding skip_bias_add to Megatron-Core).
     results = converter.test_conversion(
         megatron_state=megatron_state,
-        hf_config=hf_config,
         test_input=test_input,
         additional_input={"skip_bias_add": True},
     )

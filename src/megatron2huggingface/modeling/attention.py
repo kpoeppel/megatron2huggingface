@@ -155,7 +155,9 @@ class SelfAttention(nn.Module):
             config, "num_query_groups", config.num_attention_heads
         )
         self.hidden_size_per_attention_head = (
-            self.hidden_size // self.num_attention_heads
+            config.kv_channels
+            if config.kv_channels is not None
+            else (config.hidden_size // config.num_attention_heads)
         )
 
         # Projection sizes

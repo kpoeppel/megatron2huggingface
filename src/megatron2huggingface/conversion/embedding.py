@@ -10,6 +10,7 @@ from typing import Any
 
 from megatron2huggingface.conversion.config import megatron2transformer_config
 from megatron2huggingface.conversion.base import BaseConverter
+from megatron2huggingface.configuration_megatron import MegatronConfig
 
 logger = logging.getLogger(__name__)
 
@@ -90,9 +91,10 @@ class EmbeddingConverter(BaseConverter):
             position_embedding_type=pos_type,
         )
 
-    def create_hf_module(self, config: Any, **kwargs):
+    def create_hf_module(self, **kwargs):
         """Instantiate a simple HF-style embedding module that mirrors
         Megatron."""
+        config = MegatronConfig(**self.megatron_config)
 
         class HFEmbedding(nn.Module):
             def __init__(self, cfg):

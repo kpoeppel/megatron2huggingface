@@ -126,6 +126,7 @@ class MegatronDecoderLayer(nn.Module):
 
     def __init__(self, config: MegatronConfig, layer_idx: int):
         super().__init__()
+        self.config = config
         self.hidden_size = config.hidden_size
 
         self.self_attn = SelfAttention(config=config)
@@ -160,8 +161,9 @@ class MegatronDecoderLayer(nn.Module):
         # hidden_states = self.input_layernorm(hidden_states)
 
         # Self Attention
+        # needs to be called (S, B, H)
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
-            hidden_states=hidden_states,
+            hidden_states=hidden_states.permute(1, 0, 2),
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_value=past_key_value,
@@ -169,7 +171,8 @@ class MegatronDecoderLayer(nn.Module):
             use_cache=use_cache,
             **kwargs,
         )
-        hidden_states = residual + hidden_states
+        # returns (S, B, H)
+        hidden_states = residual + hidden_states.permute(1, 0, 2)
 
         # Fully Connected
         residual = hidden_states
@@ -252,9 +255,7 @@ class MegatronModel(MegatronPreTrainedModel):
         if config.normalization == "LayerNorm":
             self.norm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
         elif config.normalization == "RMSNorm":
-            from transformers.models.llama.modeling_llama import LlamaRMSNorm
-
-            self.norm = LlamaRMSNorm(config.hidden_size, eps=config.norm_epsilon)
+            self.norm = nn.RMSNorm(config.hidden_size, eps=config.norm_epsilon)
         else:
             raise ValueError(f"Unsupported normalization: {config.normalization}")
 

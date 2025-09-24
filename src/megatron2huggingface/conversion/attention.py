@@ -102,10 +102,11 @@ class AttentionConverter(BaseConverter):
                 f"Converted output projection bias: {megatron_state[dense_bias_key].shape}"
             )
 
-    def create_hf_module(self, config: MegatronConfig, **kwargs) -> SelfAttention:
+    def create_hf_module(self, **kwargs) -> SelfAttention:
         """Create a HuggingFace-compatible attention module using our Megatron-
         style implementation."""
         # Do not add new config fields; causal behavior is inferred in HF attention when no mask is provided.
+        config = MegatronConfig(**self.megatron_config)
         return SelfAttention(config)
 
     def create_megatron_module(self, **kwargs) -> nn.Module:
@@ -119,8 +120,18 @@ class AttentionConverter(BaseConverter):
         logger.debug("Creating Megatron SelfAttention module for layer 0")
         config = self.megatron_config
 
+        transformer_config = megatron2transformer_config(config)
+
         # Define submodules for SelfAttention
-        submodules = get_gpt_decoder_block_spec().submodules.self_attention.submodules
+        submodules = (
+            get_gpt_decoder_block_spec(
+                transformer_config,
+                use_transformer_engine=True,
+                normalization=config["normalization"],
+            )
+            .layer_specs[0]
+            .submodules.self_attention.submodules
+        )
 
         # Create ModelCommProcessGroups (assuming default setup for now)
         # This needs to be properly initialized based on Megatron-LM's distributed setup
@@ -129,7 +140,7 @@ class AttentionConverter(BaseConverter):
 
         # Instantiate Megatron-LM's SelfAttention
         megatron_attention = MegatronSelfAttention(
-            config=megatron2transformer_config(config),
+            config=transformer_config,
             submodules=submodules,
             layer_number=0,
             attn_mask_type=AttnMaskType.causal,  # Use causal mask for GPT-style modeling
