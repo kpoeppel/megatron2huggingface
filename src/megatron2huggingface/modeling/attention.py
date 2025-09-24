@@ -163,7 +163,9 @@ class SelfAttention(nn.Module):
             self.hidden_size_per_attention_head * self.num_attention_heads
         )
         self.kv_projection_size = (
-            self.hidden_size_per_attention_head * self.num_query_groups
+            (self.hidden_size_per_attention_head * self.num_query_groups)
+            if config.group_query_attention
+            else self.query_projection_size
         )
 
         # QKV projection - Megatron naming

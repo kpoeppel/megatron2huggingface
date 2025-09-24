@@ -25,7 +25,7 @@ from transformers.modeling_attn_mask_utils import (
 )
 
 from .configuration_megatron import MegatronConfig
-from .modeling import SelfAttention, MLP
+from .modeling import SelfAttention, MLP, LayerNorm, RMSNorm, MoeMLP
 
 
 logger = logging.get_logger(__name__)
@@ -129,7 +129,15 @@ class MegatronDecoderLayer(nn.Module):
         self.hidden_size = config.hidden_size
 
         self.self_attn = SelfAttention(config=config)
-        self.mlp = MLP(config=config)
+        if config.num_experts is not None and config.num_experts > 1:
+            self.pre_mlp_layernorm = (
+                LayerNorm(self.hidden_size, eps=config.norm_epsilon)
+                if config.normalization == "LayerNorm"
+                else RMSNorm(self.hidden_size, eps=config.norm_epsilon)
+            )
+            self.mlp = MoeMLP(config=config)
+        else:
+            self.mlp = MLP(config=config)
 
     def forward(
         self,
@@ -166,7 +174,11 @@ class MegatronDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         # hidden_states = self.post_attention_layernorm(hidden_states)
-        hidden_states = self.mlp(hidden_states)
+        if self.config.num_experts is not None and self.config.num_experts > 1:
+            hidden_states = self.pre_mlp_layernorm(hidden_states)
+            hidden_states = self.mlp(hidden_states)
+        else:
+            hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)

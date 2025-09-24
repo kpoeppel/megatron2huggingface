@@ -59,7 +59,7 @@ def test_mlp_conversion(
     # Strict filtered load-state check to catch missing/unexpected keys early
     converted = converter.convert_weights(megatron_state)
     hf_module = converter.create_hf_module(hf_config).to(device)
-    missing, unexpected = hf_module.load(converted, strict=False)
+    missing, unexpected = hf_module.load_state_dict(converted, strict=False)
     assert not missing and not unexpected
 
     results = converter.test_conversion(

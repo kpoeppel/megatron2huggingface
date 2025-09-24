@@ -101,7 +101,7 @@ def test_full_model_conversion(
     # Load converted weights (filter to matching keys)
     converted = converter.convert_weights(megatron_state)
     hf_module = converter.create_hf_module().to(device)
-    missing, unexpected = hf_module.load(converted, strict=False)
+    missing, unexpected = hf_module.load_state_dict(converted, strict=False)
     assert not missing and not unexpected
 
     # Compare parameter counts

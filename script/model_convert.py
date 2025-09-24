@@ -47,6 +47,25 @@ def main():
     cfg_dict["pretrained_checkpoint"] = args.checkpoint_dir
     cfg_dict["ckpt_step"] = args.checkpoint_iteration
     cfg_dict["auto_detect_ckpt_format"] = True
+    cfg_dict["tensor_model_parallel_size"] = 1
+    cfg_dict["sequence_parallel"] = False
+    if cfg_dict["expert_tensor_parallel_size"] is not None:
+        cfg_dict["expert_tensor_parallel_size"] = 1
+    cfg_dict["pipeline_model_parallel_size"] = 1
+    cfg_dict["context_parallel_size"] = 1
+    cfg_dict["recompute_method"] = None
+    cfg_dict["recompute_granularity"] = None
+    cfg_dict["gradient_accumulation_fusion"] = False
+    cfg_dict["data_parallel_sharding_strategy"] = None
+    # take care of badly saved argument values
+    for key in cfg_dict:
+        try:
+            cfg_dict[key] = int(cfg_dict[key])
+        except (ValueError, TypeError):
+            try:
+                cfg_dict[key] = float(cfg_dict[key])
+            except (ValueError, TypeError):
+                pass
 
     _ = MegatronConfig(**cfg_dict)  # check if configuration actually works.
     megatron_args = SimpleNamespace(world_size=1, rank=0, **cfg_dict)
@@ -73,12 +92,12 @@ def main():
 
     hf_state_dict = converter.convert_weights(megatron_state_dict)
 
-    del megatron_model
-    del megatron_state_dict
+    # del megatron_model
+    # del megatron_state_dict
 
     hf_model = converter.create_hf_module()
 
-    hf_model.load(hf_state_dict, strict=True)
+    hf_model.load_state_dict(hf_state_dict, strict=True)
 
     hf_model.save_pretrained(args.output_dir, from_pt=True)
 

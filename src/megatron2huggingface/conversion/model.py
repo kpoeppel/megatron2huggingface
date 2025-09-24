@@ -16,7 +16,9 @@ from .base import BaseConverter, extract_submodule_state_dict, add_prefix_to_sta
 from .embedding import EmbeddingConverter
 from .attention import AttentionConverter
 from .mlp import MLPConverter
+from .moemlp import MoeMLPConverter
 from .layer_norm import LayerNormConverter
+from .config import megatron2transformer_config
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +33,14 @@ class ModelConverter(BaseConverter):
         super().__init__(megatron_config)
         self.embedding_converter = EmbeddingConverter(megatron_config)
         self.attention_converter = AttentionConverter(megatron_config)
-        self.mlp_converter = MLPConverter(megatron_config)
+        if (
+            megatron_config["num_experts"] is not None
+            and megatron_config["num_experts"] > 1
+        ):
+            self.mlp_prenorm_converter = LayerNormConverter(megatron_config)
+            self.mlp_converter = MoeMLPConverter(megatron_config)
+        else:
+            self.mlp_converter = MLPConverter(megatron_config)
         self.layer_norm_converter = LayerNormConverter(megatron_config)
 
     def convert_weights(
@@ -95,6 +104,24 @@ class ModelConverter(BaseConverter):
                 )
 
             # Convert MLP
+            if (
+                self.megatron_config["num_experts"] is not None
+                and self.megatron_config["num_experts"] > 1
+            ):
+                mlp_norm_prefix = f"{layer_prefix}.pre_mlp_layernorm"
+                mlp_norm_submodule_weights = extract_submodule_state_dict(
+                    megatron_state_dict, mlp_norm_prefix
+                )
+                if mlp_norm_submodule_weights:
+                    mlp_norm_converted = self.mlp_prenorm_converter.convert_weights(
+                        mlp_norm_submodule_weights, layer_idx=layer_idx, **kwargs
+                    )
+                    converted_weights.update(
+                        add_prefix_to_state_dict(
+                            mlp_norm_converted, f"layers.{layer_idx}.pre_mlp_layernorm"
+                        )
+                    )
+
             mlp_prefix = f"{layer_prefix}.mlp"
             mlp_submodule_weights = extract_submodule_state_dict(
                 megatron_state_dict, mlp_prefix
@@ -208,9 +235,8 @@ class ModelConverter(BaseConverter):
         # Try to import megatron_core
         from megatron.core import parallel_state
         from megatron.core.models.gpt import GPTModel
-        from megatron.core.transformer.transformer_config import TransformerConfig
         from megatron.core.models.gpt.gpt_layer_specs import (
-            get_gpt_layer_with_transformer_engine_spec,
+            get_gpt_decoder_block_spec,
         )
 
         config = self.megatron_config
@@ -222,32 +248,34 @@ class ModelConverter(BaseConverter):
             )
 
         # Create transformer config
-        transformer_config = TransformerConfig(
-            num_layers=config["num_layers"],
-            hidden_size=config["hidden_size"],
-            ffn_hidden_size=config.get("ffn_hidden_size", config["hidden_size"] * 4),
-            num_attention_heads=config["num_attention_heads"],
-            num_query_groups=config.get(
-                "num_query_groups", config["num_attention_heads"]
-            ),
-            # max_position_embeddings=config.get("max_position_embeddings", 2048),
-            use_cpu_initialization=True,
-            activation_func=config.get("activation_func"),
-            gated_linear_unit=True,
-            bias_activation_fusion=False,
-            add_bias_linear=config.get("add_bias_linear", True),
-            normalization="RMSNorm",
-            layernorm_epsilon=config.get("rms_norm_eps", 1e-6),
-            attention_dropout=config.get("attention_dropout", 0.0),
-            hidden_dropout=config.get("hidden_dropout", 0.0),
-        )
+        # transformer_config = TransformerConfig(
+        #     num_layers=config["num_layers"],
+        #     hidden_size=config["hidden_size"],
+        #     ffn_hidden_size=config.get("ffn_hidden_size", config["hidden_size"] * 4),
+        #     num_attention_heads=config["num_attention_heads"],
+        #     num_query_groups=config.get(
+        #         "num_query_groups", config["num_attention_heads"]
+        #     ),
+        #     # max_position_embeddings=config.get("max_position_embeddings", 2048),
+        #     use_cpu_initialization=True,
+        #     activation_func=config.get("activation_func"),
+        #     gated_linear_unit=True,
+        #     bias_activation_fusion=False,
+        #     add_bias_linear=config.get("add_bias_linear", True),
+        #     normalization="RMSNorm",
+        #     layernorm_epsilon=config.get("rms_norm_eps", 1e-6),
+        #     attention_dropout=config.get("attention_dropout", 0.0),
+        #     hidden_dropout=config.get("hidden_dropout", 0.0),
+        # )
+        transformer_config = megatron2transformer_config(config)
 
         # Create GPT model
         model = GPTModel(
             config=transformer_config,
-            transformer_layer_spec=get_gpt_layer_with_transformer_engine_spec(
-                num_experts=config["num_experts"],
-                moe_grouped_gemm=config["moe_grouped_gemm"],
+            transformer_layer_spec=get_gpt_decoder_block_spec(
+                transformer_config,
+                use_transformer_engine=True,
+                normalization=config["normalization"],
             ),
             vocab_size=config["vocab_size"],
             max_sequence_length=config.get("max_position_embeddings", 2048),

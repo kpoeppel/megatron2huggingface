@@ -12,9 +12,7 @@ import torch
 import torch.nn as nn
 
 
-from megatron.core.models.gpt.gpt_layer_specs import (
-    get_gpt_layer_with_transformer_engine_spec,
-)
+from megatron.core.models.gpt.gpt_layer_specs import get_gpt_decoder_block_spec
 
 from megatron2huggingface.conversion.base import (
     BaseConverter,
@@ -122,7 +120,7 @@ class AttentionConverter(BaseConverter):
         config = self.megatron_config
 
         # Define submodules for SelfAttention
-        submodules = get_gpt_layer_with_transformer_engine_spec().submodules.self_attention.submodules
+        submodules = get_gpt_decoder_block_spec().submodules.self_attention.submodules
 
         # Create ModelCommProcessGroups (assuming default setup for now)
         # This needs to be properly initialized based on Megatron-LM's distributed setup

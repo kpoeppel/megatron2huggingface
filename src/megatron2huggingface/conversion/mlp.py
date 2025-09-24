@@ -105,17 +105,13 @@ class MLPConverter(BaseConverter):
         """Create a real Megatron-Core MLP module for comparison (no
         fallbacks/mocks)."""
         from megatron.core.transformer.mlp import MLP as MegatronMLP
-        from megatron.core.models.gpt.gpt_layer_specs import (
-            get_gpt_layer_with_transformer_engine_spec,
-        )
+        from megatron.core.models.gpt.gpt_layer_specs import get_gpt_decoder_block_spec
         from megatron2huggingface.conversion.config import megatron2transformer_config
 
         # Build TransformerConfig from our dict
         cfg = megatron2transformer_config(self.megatron_config)
 
-        submodules = (
-            get_gpt_layer_with_transformer_engine_spec().submodules.mlp.submodules
-        )
+        submodules = get_gpt_decoder_block_spec().submodules.mlp.submodules
 
         # Instantiate Megatron MLP with correct signature
         # - config: TransformerConfig

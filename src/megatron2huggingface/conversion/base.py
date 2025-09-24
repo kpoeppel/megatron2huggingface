@@ -371,10 +371,10 @@ class BaseConverter:
         )
 
         # Load weights
-        hf_module.load(hf_weights, strict=False)
+        hf_module.load_state_dict(hf_weights, strict=False)
 
         # Extract and load Megatron weights
-        megatron_module.load(megatron_state, strict=False)
+        megatron_module.load_state_dict(megatron_state, strict=False)
 
         # Set to eval mode
         hf_module.eval()
