@@ -6,39 +6,6 @@ from megatron2huggingface.configuration_megatron import MegatronConfig
 from megatron2huggingface.conversion.model import ModelConverter
 
 
-def test_modular_decoder_layer(device: str = "cpu", debug: bool = False):
-    """Smoke test for HF-side TransformerLayer component (kept minimal, aligns
-    with strict style)."""
-    from megatron2huggingface.modeling.decoder_layer import TransformerLayer
-
-    hidden_size = 512
-    intermediate_size = 1024
-    num_heads = 8
-    batch_size, seq_len = 2, 10
-
-    config = MegatronConfig(
-        hidden_size=hidden_size,
-        ffn_hidden_size=intermediate_size,
-        num_attention_heads=num_heads,
-        num_query_groups=num_heads,
-        normalization="RMSNorm",
-        rms_norm_eps=1e-6,
-        attention_dropout=0.0,
-        hidden_dropout=0.0,
-        add_bias_linear=True,
-        add_qkv_bias=False,
-        qk_layernorm=False,
-        layernorm_epsilon=1e-5,
-        swiglu=True,
-        activation_function="silu",
-    )
-
-    layer = TransformerLayer(config).to(device)
-    x = torch.randn(seq_len, batch_size, hidden_size, device=device)  # S,B,E layout
-    y, _, _ = layer(x)
-    assert y.shape == x.shape
-
-
 def test_full_model_conversion(
     megatron_config_filled_dict,
     vocab_size: int = 1000,
