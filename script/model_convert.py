@@ -10,6 +10,27 @@ import torch.distributed as dist
 import os
 from types import SimpleNamespace
 
+import inspect
+
+
+def signature_to_dict(func_or_cls, drop_self=True):
+    # If a class is passed, inspect its __init__
+    if inspect.isclass(func_or_cls):
+        func = func_or_cls.__init__
+    else:
+        func = func_or_cls
+
+    sig = inspect.signature(func)
+    result = {}
+    for name, param in sig.parameters.items():
+        if drop_self and name == "self":
+            continue
+        if param.default is not inspect._empty:
+            result[name] = param.default
+        else:
+            result[name] = None  # or param.default if you want inspect._empty
+    return result
+
 
 if not dist.is_initialized():
     os.environ["MASTER_ADDR"] = "localhost"
@@ -41,7 +62,9 @@ def main():
         cfg_dict = yaml.safe_load(fp)
         # todo: take care of more nested subsets
 
-    cfg_dict = cfg_dict[args.config_subset]
+    cfg_dict_base = signature_to_dict(MegatronConfig)
+    cfg_dict_base.update(**cfg_dict[args.config_subset])
+    cfg_dict = cfg_dict_base
 
     cfg_dict["load"] = args.checkpoint_dir
     cfg_dict["pretrained_checkpoint"] = args.checkpoint_dir
