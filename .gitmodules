@@ -1,6 +1,6 @@
 [submodule "transformers"]
 	path = transformers
-	url = ./transformers
+	url = https://github.com/huggingface/transformers
 [submodule "Megatron-LM"]
 	path = Megatron-LM
-	url = ./Megatron-LM/
+	url = https://github.com/NVIDIA/Megatron-LM
