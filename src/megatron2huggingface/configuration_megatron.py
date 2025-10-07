@@ -6,7 +6,8 @@ from transformers.configuration_utils import PretrainedConfig
 
 
 class MegatronConfig(PretrainedConfig):
-    r"""This configures a MegatronModel.
+    r"""
+    This configures a MegatronModel.
 
     Args:
         num_layers (`int`):
@@ -18,22 +19,22 @@ class MegatronConfig(PretrainedConfig):
         hidden_size (`int`):
             Argument hidden_size. Tansformer hidden size.
         ffn_hidden_size (`int`):
-            Argument ffn_hidden_size. Transformer Feed-Forward Network hidden size. This is set to 4*hidden-size if
-            not provided
+            Argument ffn_hidden_size. Transformer Feed-Forward Network hidden size. This is set to 4*hidden-size if not
+            provided
         num_attention_heads (`int`):
             Argument num_attention_heads. Number of transformer attention heads.
         attention_backend (`str`, *optional*, defaults to "default"):
             Argument attention_backend. Attention backend to use (flash,fused,unfused,local,auto). Defaults to auto
         kv_channels (`int`):
             Argument kv_channels. Projection weights dimension in multi-head attention. This is set to
-             args.hidden_size // args.num_attention_heads if not provided.
+            args.hidden_size // args.num_attention_heads if not provided.
         group_query_attention (`bool`, *optional*, defaults to `False`):
             Argument group_query_attention. Use group-query attention.
         num_query_groups (`int`, *optional*, defaults to 1):
             Argument num_query_groups.
         max_position_embeddings (`int`):
-            Argument max_position_embeddings. Maximum number of position embeddings to use. This is the size
-            of position embedding.
+            Argument max_position_embeddings. Maximum number of position embeddings to use. This is the size of
+            position embedding.
         position_embedding_type (`str`, *optional*, defaults to "learned_absolute"):
             Argument position_embedding_type. Position embedding type.
         relative_attention_num_buckets (`int`, *optional*, defaults to 32):
@@ -41,8 +42,8 @@ class MegatronConfig(PretrainedConfig):
         relative_attention_max_distance (`int`, *optional*, defaults to 128):
             Argument relative_attention_max_distance. Maximum distance for relative position embeddings calculation.
         use_rotary_position_embeddings (`bool`, *optional*, defaults to `False`):
-            Argument use_rotary_position_embeddings. Use rotary positional embeddings or not. Deprecated:
-            use --position-embedding-type
+            Argument use_rotary_position_embeddings. Use rotary positional embeddings or not. Deprecated: use
+            --position-embedding-type
         rotary_base (`int`, *optional*, defaults to 10000):
             Argument rotary_base. Base to use for rotary positional embeddings, default 10000
         rotary_percent (`float`, *optional*, defaults to 1.0):
@@ -56,31 +57,30 @@ class MegatronConfig(PretrainedConfig):
         rope_scaling_factor (`float`, *optional*, defaults to 8.0):
             Argument rope_scaling_factor. Rope scaling factor in llama3.x models
         no_rope_freq (`Any`):
-            Argument no_rope_freq. Controls which layers to skip performing Rotary Position Embedding. Accepts
-            either: - An integer N: Represents a 1:N ratio, meaning RoPE is skipped every N-1 layers. - A
-            string containing a Python list expression that defines a custom pattern, e.g.: "([0]*3+[1]*1)*3"
-            evaluates to [0,0,0,1,0,0,0,1,0,0,0,1] where 1 indicates no-rope layer. This patten is equivalent
-            to --no-rope-freq=4.By default this is disabled and set to None, indicating RoPE will be performedon
-            every layer.
+            Argument no_rope_freq. Controls which layers to skip performing Rotary Position Embedding. Accepts either:
+            - An integer N: Represents a 1:N ratio, meaning RoPE is skipped every N-1 layers. - A string containing a
+            Python list expression that defines a custom pattern, e.g.: "([0]*3+[1]*1)*3" evaluates to
+            [0,0,0,1,0,0,0,1,0,0,0,1] where 1 indicates no-rope layer. This patten is equivalent to --no-rope-freq=4.By
+            default this is disabled and set to None, indicating RoPE will be performedon every layer.
         add_position_embedding (`bool`, *optional*, defaults to `True`):
             Argument add_position_embedding. Disable position embedding. Deprecated: use --position-embedding-type
         mrope_section (`list[int]`):
             Argument mrope_section. Multimodal rope section is for channel dimension, empty by default.
         make_vocab_size_divisible_by (`int`, *optional*, defaults to 128):
-            Argument make_vocab_size_divisible_by. Pad the vocab size to be divisible by this value.This is added
-            for computational efficieny reasons.
+            Argument make_vocab_size_divisible_by. Pad the vocab size to be divisible by this value.This is added for
+            computational efficieny reasons.
         normalization (`str`, *optional*, defaults to "LayerNorm"):
             Argument normalization. Which normalization technique to use.
         norm_epsilon (`float`, *optional*, defaults to 1e-05):
             Argument norm_epsilon. Epsilon for layer norm and RMS norm.
         apply_layernorm_1p (`bool`, *optional*, defaults to `False`):
-            Argument apply_layernorm_1p. Adjust LayerNorm weights such that they are centered around zero.
-            This improves numerical stability.
+            Argument apply_layernorm_1p. Adjust LayerNorm weights such that they are centered around zero. This
+            improves numerical stability.
         apply_residual_connection_post_layernorm (`bool`, *optional*, defaults to `False`):
             Argument apply_residual_connection_post_layernorm. If set, use original BERT residula connection ordering.
         openai_gelu (`bool`, *optional*, defaults to `False`):
-            Argument openai_gelu. Use OpenAIs GeLU implementation. This optionshould not be used unless for
-            backward compatibilityreasons.
+            Argument openai_gelu. Use OpenAIs GeLU implementation. This optionshould not be used unless for backward
+            compatibilityreasons.
         squared_relu (`bool`, *optional*, defaults to `False`):
             Argument squared_relu. Use squared relu activation instead of default gelu
         swiglu (`bool`, *optional*, defaults to `False`):
@@ -94,13 +94,13 @@ class MegatronConfig(PretrainedConfig):
         multi_latent_attention (`bool`, *optional*, defaults to `False`):
             Argument multi_latent_attention. Use multi-latent attention for model.
         mtp_num_layers (`int`):
-            Argument mtp_num_layers. Number of Multi-Token Prediction (MTP) Layers.MTP extends the prediction scope
-            to multiple future tokens at each position.This MTP implementation sequentially predict additional
-            tokens by using D sequential modules to predict D additional tokens.
+            Argument mtp_num_layers. Number of Multi-Token Prediction (MTP) Layers.MTP extends the prediction scope to
+            multiple future tokens at each position.This MTP implementation sequentially predict additional tokens by
+            using D sequential modules to predict D additional tokens.
         mtp_loss_scaling_factor (`float`, *optional*, defaults to 0.1):
-            Argument mtp_loss_scaling_factor. Scaling factor of Multi-Token Prediction (MTP) loss. We compute
-            the average of the MTP losses across all depths, and multiply it the scaling factor to obtain the
-            overall MTP loss, which serves as an additional training objective.
+            Argument mtp_loss_scaling_factor. Scaling factor of Multi-Token Prediction (MTP) loss. We compute the
+            average of the MTP losses across all depths, and multiply it the scaling factor to obtain the overall MTP
+            loss, which serves as an additional training objective.
         attention_dropout (`float`, *optional*, defaults to 0.1):
             Argument attention_dropout. Post attention dropout probability.
         hidden_dropout (`float`, *optional*, defaults to 0.1):
@@ -124,32 +124,32 @@ class MegatronConfig(PretrainedConfig):
         sgd_momentum (`float`, *optional*, defaults to 0.9):
             Argument sgd_momentum. Momentum factor for sgd
         micro_batch_size (`int`):
-            Argument micro_batch_size. Batch size per model instance (local batch size). Global batch size is
-            local batch size times data parallel size times number of micro batches.
+            Argument micro_batch_size. Batch size per model instance (local batch size). Global batch size is local
+            batch size times data parallel size times number of micro batches.
         batch_size (`int`):
             Argument batch_size. Old batch size parameter, do not use. Use --micro-batch-size instead
         global_batch_size (`int`):
-            Argument global_batch_size. Training batch size. If set, it should be a multiple of micro-batch-size
-            times data-parallel-size. If this value is None, then use micro-batch-size * data-parallel-size as
-            the global batch size. This choice will result in 1 for number of micro-batches.
+            Argument global_batch_size. Training batch size. If set, it should be a multiple of micro-batch-size times
+            data-parallel-size. If this value is None, then use micro-batch-size * data-parallel-size as the global
+            batch size. This choice will result in 1 for number of micro-batches.
         rampup_batch_size (`list[str]`):
-            Argument rampup_batch_size. Batch size ramp up with the following values:  --rampup-batch-size <start
-            batch size>                       <batch size incerement>                       <ramp-up samples>
-            For example:   --rampup-batch-size 16 8 300000 \    --global-batch-size 1024will start with global
-            batch size 16 and over  (1024 - 16) / 8 = 126 intervals will increasethe batch size linearly to 1024.
-            In each intervalwe will use approximately 300000 / 126 = 2380 samples.
+            Argument rampup_batch_size. Batch size ramp up with the following values:  --rampup-batch-size <start batch
+            size>                       <batch size incerement>                       <ramp-up samples> For example:
+            --rampup-batch-size 16 8 300000 \    --global-batch-size 1024will start with global batch size 16 and over
+            (1024 - 16) / 8 = 126 intervals will increasethe batch size linearly to 1024. In each intervalwe will use
+            approximately 300000 / 126 = 2380 samples.
         decrease_batch_size_if_needed (`bool`, *optional*, defaults to `False`):
-            Argument decrease_batch_size_if_needed. If set, decrease batch size if microbatch_size * dp_sizedoes
-            not divide batch_size. Useful for KSO (Keep Soldiering On)to continue making progress if number of
-            healthy GPUs (andcorresponding dp_size) does not support current batch_size.Old batch_size will be
-            restored if training is re-started withdp_size that divides batch_size // microbatch_size.
+            Argument decrease_batch_size_if_needed. If set, decrease batch size if microbatch_size * dp_sizedoes not
+            divide batch_size. Useful for KSO (Keep Soldiering On)to continue making progress if number of healthy GPUs
+            (andcorresponding dp_size) does not support current batch_size.Old batch_size will be restored if training
+            is re-started withdp_size that divides batch_size // microbatch_size.
         recompute_activations (`bool`, *optional*, defaults to `False`):
-            Argument recompute_activations. recompute activation to allow for training with larger models,
-            sequences, and batch sizes.
+            Argument recompute_activations. recompute activation to allow for training with larger models, sequences,
+            and batch sizes.
         recompute_granularity (`str`):
-            Argument recompute_granularity. Checkpoint activations to allow for training with larger models,
-            sequences, and batch sizes. It is supported at two granularities 1) full: whole transformer layer
-            is recomputed, 2) selective: submodules set in --recompute-modules are recomputed, default is core_attn.
+            Argument recompute_granularity. Checkpoint activations to allow for training with larger models, sequences,
+            and batch sizes. It is supported at two granularities 1) full: whole transformer layer is recomputed, 2)
+            selective: submodules set in --recompute-modules are recomputed, default is core_attn.
         check_for_nan_in_loss_and_grad (`bool`, *optional*, defaults to `True`):
             Argument check_for_nan_in_loss_and_grad. Check for NaNs in loss and grad
         check_for_spiky_loss (`bool`, *optional*, defaults to `False`):
@@ -157,33 +157,31 @@ class MegatronConfig(PretrainedConfig):
         check_for_large_grads (`bool`, *optional*, defaults to `False`):
             Argument check_for_large_grads. Check for unexpectedly large grads
         distribute_saved_activations (`bool`, *optional*, defaults to `False`):
-            Argument distribute_saved_activations. If set, distribute recomputed activations across model
-            parallel group.
+            Argument distribute_saved_activations. If set, distribute recomputed activations across model parallel
+            group.
         recompute_method (`str`):
-            Argument recompute_method. 1) uniform: uniformly divide the total number of Transformer layers
-            and recompute the input activation of each divided chunk at specified granularity, 2) recompute the
-            input activations of only a set number of individual Transformer layers per pipeline stage and do the
-            rest without any recomputing at specified granularitydefault) do not apply activations recompute to
-            any layers
+            Argument recompute_method. 1) uniform: uniformly divide the total number of Transformer layers and
+            recompute the input activation of each divided chunk at specified granularity, 2) recompute the input
+            activations of only a set number of individual Transformer layers per pipeline stage and do the rest
+            without any recomputing at specified granularitydefault) do not apply activations recompute to any layers
         recompute_num_layers (`int`):
-            Argument recompute_num_layers. 1) uniform: the number of Transformer layers in each uniformly
-            divided recompute unit, 2) block: the number of individual Transformer layers to recompute within
-            each pipeline stage.
+            Argument recompute_num_layers. 1) uniform: the number of Transformer layers in each uniformly divided
+            recompute unit, 2) block: the number of individual Transformer layers to recompute within each pipeline
+            stage.
         recompute_modules (`list[str]`):
-            Argument recompute_modules. The submodules to recompute. choices: "core_attn", "moe_act",
-            "layernorm", "mla_up_proj", "mlp", "moe". default: ["core_attn"]."core_attn": recompute the core
-            attention part of the transformer layer. "moe_act": recompute the MoE MLP activation function.
-            "layernorm": recompute the input_layernorm and pre_mlp_layernorm. "mla_up_proj": recompute the MLA
-            up projection and RoPE applying parts."mlp": recompute the dense MLP layer."moe": recompute the
-            MoE layer."moe_act", "layernorm", and "mla_up_proj" use output-discarding checkpointing,
-            "core_attn", "mlp", and "moe" uses normal checkpointing.
+            Argument recompute_modules. The submodules to recompute. choices: "core_attn", "moe_act", "layernorm",
+            "mla_up_proj", "mlp", "moe". default: ["core_attn"]."core_attn": recompute the core attention part of the
+            transformer layer. "moe_act": recompute the MoE MLP activation function. "layernorm": recompute the
+            input_layernorm and pre_mlp_layernorm. "mla_up_proj": recompute the MLA up projection and RoPE applying
+            parts."mlp": recompute the dense MLP layer."moe": recompute the MoE layer."moe_act", "layernorm", and
+            "mla_up_proj" use output-discarding checkpointing, "core_attn", "mlp", and "moe" uses normal checkpointing.
         clone_scatter_output_in_embedding (`bool`, *optional*, defaults to `True`):
-            Argument clone_scatter_output_in_embedding. If not set, clone the output of the scatter in embedding
-            layer to GC original tensor.
+            Argument clone_scatter_output_in_embedding. If not set, clone the output of the scatter in embedding layer
+            to GC original tensor.
         profile (`bool`, *optional*, defaults to `False`):
-            Argument profile. Enable nsys profiling. When using this option, nsys options should be specified
-            in commandline. An example nsys commandline is `nsys profile -s none -t nvtx,cuda -o
-            <path/to/output_file> --force-overwrite true --capture-range=cudaProfilerApi --capture-range-end=stop`.
+            Argument profile. Enable nsys profiling. When using this option, nsys options should be specified in
+            commandline. An example nsys commandline is `nsys profile -s none -t nvtx,cuda -o <path/to/output_file>
+            --force-overwrite true --capture-range=cudaProfilerApi --capture-range-end=stop`.
         profile_step_start (`int`, *optional*, defaults to 10):
             Argument profile_step_start. Global step to start profiling.
         profile_step_end (`int`, *optional*, defaults to 12):
@@ -195,8 +193,8 @@ class MegatronConfig(PretrainedConfig):
         enable_gloo_process_groups (`bool`, *optional*, defaults to `True`):
             Argument enable_gloo_process_groups. Disables creation and usage of Gloo process groups.
         use_pytorch_profiler (`bool`, *optional*, defaults to `False`):
-            Argument use_pytorch_profiler. Use the built-in pytorch profiler. Useful if you wish to view profiles
-            in tensorboard.
+            Argument use_pytorch_profiler. Use the built-in pytorch profiler. Useful if you wish to view profiles in
+            tensorboard.
         profile_ranks (`list[int]`, *optional*, defaults to [0]):
             Argument profile_ranks. Global ranks to profile.
         record_memory_history (`bool`, *optional*, defaults to `False`):
@@ -208,11 +206,11 @@ class MegatronConfig(PretrainedConfig):
         tp_comm_overlap_cfg (`str`):
             Argument tp_comm_overlap_cfg. Config file when tp_comm_overlap is enabled.
         tp_comm_overlap_ag (`bool`, *optional*, defaults to `True`):
-            Argument tp_comm_overlap_ag. Disables the All-Gather overlap with GEMM by pipelining the GEMM
-            and All-Gather.
+            Argument tp_comm_overlap_ag. Disables the All-Gather overlap with GEMM by pipelining the GEMM and
+            All-Gather.
         tp_comm_overlap_rs (`bool`, *optional*, defaults to `True`):
-            Argument tp_comm_overlap_rs. Disables the Reduce-Scatter overlap with GEMM by pipelining the GEMM
-            and Reduce-Scatter.
+            Argument tp_comm_overlap_rs. Disables the Reduce-Scatter overlap with GEMM by pipelining the GEMM and
+            Reduce-Scatter.
         tp_comm_overlap_rs_dgrad (`bool`, *optional*, defaults to `False`):
             Argument tp_comm_overlap_rs_dgrad. Enables the Reduce-Scatter overlap with dgrad GEMM.
         tp_comm_bulk_dgrad (`bool`, *optional*, defaults to `True`):
@@ -222,32 +220,32 @@ class MegatronConfig(PretrainedConfig):
         tp_comm_bootstrap_backend (`str`, *optional*, defaults to "nccl"):
             Argument tp_comm_bootstrap_backend. Set the bootstrapping backend of Tensor parallel communications.
         use_cpu_initialization (`bool`):
-            Argument use_cpu_initialization. If set, initialize weights on the CPU. This eliminates init
-            differences based on tensor parallelism.
+            Argument use_cpu_initialization. If set, initialize weights on the CPU. This eliminates init differences
+            based on tensor parallelism.
         empty_unused_memory_level (`int`, *optional*, defaults to 0):
-            Argument empty_unused_memory_level. Call torch.cuda.empty_cache() each iteration (training and eval),
-            to reduce fragmentation.0=off, 1=moderate, 2=aggressive.
+            Argument empty_unused_memory_level. Call torch.cuda.empty_cache() each iteration (training and eval), to
+            reduce fragmentation.0=off, 1=moderate, 2=aggressive.
         deterministic_mode (`bool`, *optional*, defaults to `False`):
-            Argument deterministic_mode. Choose code that has deterministic execution. This usually means
-            slower execution, but is good for debugging and testing.
+            Argument deterministic_mode. Choose code that has deterministic execution. This usually means slower
+            execution, but is good for debugging and testing.
         check_weight_hash_across_dp_replicas_interval (`int`):
-            Argument check_weight_hash_across_dp_replicas_interval. Interval to check weight hashes are same across
-            DP replicas. If not specified, weight hashes not checked.
+            Argument check_weight_hash_across_dp_replicas_interval. Interval to check weight hashes are same across DP
+            replicas. If not specified, weight hashes not checked.
         calculate_per_token_loss (`bool`, *optional*, defaults to `False`):
-            Argument calculate_per_token_loss. Scale cross entropy loss by the number of non-padded tokens in
-            the global batch, versus the default behavior of assuming all tokens are non-padded.
+            Argument calculate_per_token_loss. Scale cross entropy loss by the number of non-padded tokens in the
+            global batch, versus the default behavior of assuming all tokens are non-padded.
         train_sync_interval (`int`):
-            Argument train_sync_interval. Training CPU-GPU synchronization interval, to ensure that CPU is not
-            running too far ahead of GPU.
+            Argument train_sync_interval. Training CPU-GPU synchronization interval, to ensure that CPU is not running
+            too far ahead of GPU.
         checkpoint_activations (`bool`, *optional*, defaults to `False`):
-            Argument checkpoint_activations. Checkpoint activation to allow for training with larger models,
-            sequences, and batch sizes.
+            Argument checkpoint_activations. Checkpoint activation to allow for training with larger models, sequences,
+            and batch sizes.
         train_iters (`int`):
-            Argument train_iters. Total number of iterations to train over all training runs. Note that
-            either train-iters or train-samples should be provided.
+            Argument train_iters. Total number of iterations to train over all training runs. Note that either
+            train-iters or train-samples should be provided.
         train_samples (`int`):
-            Argument train_samples. Total number of samples to train over all training runs. Note that
-            either train-iters or train-samples should be provided.
+            Argument train_samples. Total number of samples to train over all training runs. Note that either
+            train-iters or train-samples should be provided.
         log_interval (`int`, *optional*, defaults to 100):
             Argument log_interval. Report loss and timing interval.
         exit_interval (`int`):
@@ -255,8 +253,8 @@ class MegatronConfig(PretrainedConfig):
         exit_duration_in_mins (`int`):
             Argument exit_duration_in_mins. Exit the program after this many minutes.
         exit_signal_handler (`bool`, *optional*, defaults to `False`):
-            Argument exit_signal_handler. Dynamically save the checkpoint and shutdown the training if SIGTERM
-            is received
+            Argument exit_signal_handler. Dynamically save the checkpoint and shutdown the training if SIGTERM is
+            received
         tensorboard_dir (`str`):
             Argument tensorboard_dir. Write TensorBoard logs to this directory.
         masked_softmax_fusion (`bool`, *optional*, defaults to `True`):
@@ -264,8 +262,8 @@ class MegatronConfig(PretrainedConfig):
         bias_gelu_fusion (`bool`, *optional*, defaults to `True`):
             Argument bias_gelu_fusion. Disable bias and gelu fusion.
         bias_swiglu_fusion (`bool`, *optional*, defaults to `True`):
-            Argument bias_swiglu_fusion. Disable bias and swiglu fusion, the fusion is available only when
-            using megatron-core.
+            Argument bias_swiglu_fusion. Disable bias and swiglu fusion, the fusion is available only when using
+            megatron-core.
         bias_dropout_fusion (`bool`, *optional*, defaults to `True`):
             Argument bias_dropout_fusion. Disable bias and dropout fusion.
         apply_rope_fusion (`bool`, *optional*, defaults to `True`):
@@ -287,11 +285,11 @@ class MegatronConfig(PretrainedConfig):
         optimizer_offload_fraction (`float`, *optional*, defaults to 1.0):
             Argument optimizer_offload_fraction. Ratio of optimizer state to offload to CPU
         use_torch_optimizer_for_cpu_offload (`bool`, *optional*, defaults to `False`):
-            Argument use_torch_optimizer_for_cpu_offload. Use torch.optim.Optimizer instead of Megatron's optimizer
-            in optimizer cpu offload mode.
+            Argument use_torch_optimizer_for_cpu_offload. Use torch.optim.Optimizer instead of Megatron's optimizer in
+            optimizer cpu offload mode.
         overlap_cpu_optimizer_d2h_h2d (`bool`, *optional*, defaults to `False`):
-            Argument overlap_cpu_optimizer_d2h_h2d. Overlap CPU optimizer step, gradients D2H and updated
-            parameters H2D.
+            Argument overlap_cpu_optimizer_d2h_h2d. Overlap CPU optimizer step, gradients D2H and updated parameters
+            H2D.
         pin_cpu_grads (`bool`, *optional*, defaults to `True`):
             Argument pin_cpu_grads. Disable pinning of CPU memory for gradients.
         pin_cpu_params (`bool`, *optional*, defaults to `True`):
@@ -301,36 +299,36 @@ class MegatronConfig(PretrainedConfig):
         async_tensor_model_parallel_allreduce (`bool`, *optional*, defaults to `True`):
             Argument async_tensor_model_parallel_allreduce. DEPRECATED. This flag is ignored.
         no_persist_layer_norm (`bool`, *optional*, defaults to `False`):
-            Argument no_persist_layer_norm. Disable using persistent fused layer norm kernel. This kernel supports
-            only a set of hidden sizes. Please check persist_ln_hidden_sizes if your hidden size is supported.
+            Argument no_persist_layer_norm. Disable using persistent fused layer norm kernel. This kernel supports only
+            a set of hidden sizes. Please check persist_ln_hidden_sizes if your hidden size is supported.
         sequence_parallel (`bool`, *optional*, defaults to `False`):
             Argument sequence_parallel. Enable sequence parallel optimization.
         gradient_accumulation_fusion (`bool`, *optional*, defaults to `True`):
-            Argument gradient_accumulation_fusion. Disable fusing gradient accumulation to weight gradient
-            computation of linear layers
+            Argument gradient_accumulation_fusion. Disable fusing gradient accumulation to weight gradient computation
+            of linear layers
         deprecated_use_mcore_models (`bool`, *optional*, defaults to `False`):
-            Argument deprecated_use_mcore_models. DEPRECATED. Use the implementation from megatron core.Now ignored
-            and mcore models are the default, use --use-legacy-models to not use core models.
+            Argument deprecated_use_mcore_models. DEPRECATED. Use the implementation from megatron core.Now ignored and
+            mcore models are the default, use --use-legacy-models to not use core models.
         use_legacy_models (`bool`, *optional*, defaults to `False`):
             Argument use_legacy_models. Use the legacy Megatron models, not Megatron-Core models.
         manual_gc (`bool`, *optional*, defaults to `False`):
-            Argument manual_gc. Disable the threshold-based default garbage collector and trigger the
-            garbage collection manually. Manual garbage collection helps to align the timing of the collection
-            across ranks which mitigates the impact of CPU-associated jitters. When the manual gc is enabled,
-            garbage collection is performed only at the start and the end of the validation routine by default.
+            Argument manual_gc. Disable the threshold-based default garbage collector and trigger the garbage
+            collection manually. Manual garbage collection helps to align the timing of the collection across ranks
+            which mitigates the impact of CPU-associated jitters. When the manual gc is enabled, garbage collection is
+            performed only at the start and the end of the validation routine by default.
         manual_gc_interval (`int`, *optional*, defaults to 0):
-            Argument manual_gc_interval. Training step interval to trigger manual garbage collection. When the value
-            is set to 0, garbage collection is not triggered between training steps.
+            Argument manual_gc_interval. Training step interval to trigger manual garbage collection. When the value is
+            set to 0, garbage collection is not triggered between training steps.
         manual_gc_eval (`bool`, *optional*, defaults to `True`):
-            Argument manual_gc_eval. When using manual garbage collection, disable garbage collection at the start
-            and the end of each evaluation run.
+            Argument manual_gc_eval. When using manual garbage collection, disable garbage collection at the start and
+            the end of each evaluation run.
         tp_comm_split_ag (`bool`, *optional*, defaults to `True`):
             Argument tp_comm_split_ag. Disables the All-Gather overlap with fprop GEMM.
         tp_comm_split_rs (`bool`, *optional*, defaults to `True`):
             Argument tp_comm_split_rs. Disables the Reduce-Scatter overlap with fprop GEMM.
         pipeline_model_parallel_comm_backend (`str`):
-            Argument pipeline_model_parallel_comm_backend. Select a communicator backend for pipeline
-            parallel communication. If None, the default backend will be used.
+            Argument pipeline_model_parallel_comm_backend. Select a communicator backend for pipeline parallel
+            communication. If None, the default backend will be used.
         high_priority_stream_groups (`list[str]`, *optional*, defaults to []):
             Argument high_priority_stream_groups. The communicator group names to use high priority streams.
         seed (`int`, *optional*, defaults to 1234):
@@ -338,23 +336,23 @@ class MegatronConfig(PretrainedConfig):
         data_parallel_random_init (`bool`, *optional*, defaults to `False`):
             Argument data_parallel_random_init. Enable random initialization of params across data parallel ranks
         init_method_std (`float`, *optional*, defaults to 0.02):
-            Argument init_method_std. Standard deviation of the zero mean normal distribution used for
-            weight initialization.
+            Argument init_method_std. Standard deviation of the zero mean normal distribution used for weight
+            initialization.
         init_method_xavier_uniform (`bool`, *optional*, defaults to `False`):
             Argument init_method_xavier_uniform. Enable Xavier uniform parameter initialization
         lr (`float`):
-            Argument lr. Initial learning rate. Depending on decay style and initial warmup, the learning rate at
-            each iteration would be different.
+            Argument lr. Initial learning rate. Depending on decay style and initial warmup, the learning rate at each
+            iteration would be different.
         lr_decay_style (`str`, *optional*, defaults to "linear"):
             Argument lr_decay_style. Learning rate decay function.
         lr_wsd_decay_style (`str`, *optional*, defaults to "exponential"):
             Argument lr_wsd_decay_style. Decay style for the annealing phase of WSD
         lr_decay_iters (`int`):
-            Argument lr_decay_iters. number of iterations to decay learning rate over, If None defaults
-            to `--train-iters`
+            Argument lr_decay_iters. number of iterations to decay learning rate over, If None defaults to
+            `--train-iters`
         lr_decay_samples (`int`):
-            Argument lr_decay_samples. number of samples to decay learning rate over, If None defaults
-            to `--train-samples`
+            Argument lr_decay_samples. number of samples to decay learning rate over, If None defaults to
+            `--train-samples`
         lr_wsd_decay_samples (`int`):
             Argument lr_wsd_decay_samples. number of samples for the annealing phase in the wsd schedule
         lr_wsd_decay_iters (`int`):
@@ -366,25 +364,25 @@ class MegatronConfig(PretrainedConfig):
         lr_warmup_samples (`int`, *optional*, defaults to 0):
             Argument lr_warmup_samples. number of samples to linearly warmup learning rate over.
         lr_warmup_init (`float`, *optional*, defaults to 0.0):
-            Argument lr_warmup_init. Initial value for learning rate warmup. The scheduler starts warmup from
-            this value.
+            Argument lr_warmup_init. Initial value for learning rate warmup. The scheduler starts warmup from this
+            value.
         warmup (`int`):
             Argument warmup. Old lr warmup argument, do not use. Use one of the--lr-warmup-* arguments above
         min_lr (`float`, *optional*, defaults to 0.0):
             Argument min_lr. Minimum value for learning rate. The schedulerclip values below this threshold.
         override_opt_param_scheduler (`bool`, *optional*, defaults to `False`):
-            Argument override_opt_param_scheduler. Reset the values of the scheduler (learning rate,warmup
-            iterations, minimum learning rate, maximum number of iterations, and decay style from input arguments
-            and ignore values from checkpoints. Notethat all the above values will be reset.
+            Argument override_opt_param_scheduler. Reset the values of the scheduler (learning rate,warmup iterations,
+            minimum learning rate, maximum number of iterations, and decay style from input arguments and ignore values
+            from checkpoints. Notethat all the above values will be reset.
         use_checkpoint_opt_param_scheduler (`bool`, *optional*, defaults to `False`):
-            Argument use_checkpoint_opt_param_scheduler. Use checkpoint to set the values of the scheduler
-            (learning rate, warmup iterations, minimum learning rate, maximum number of iterations, and decay
-            style from checkpoint and ignore input arguments.
+            Argument use_checkpoint_opt_param_scheduler. Use checkpoint to set the values of the scheduler (learning
+            rate, warmup iterations, minimum learning rate, maximum number of iterations, and decay style from
+            checkpoint and ignore input arguments.
         decoupled_lr (`float`):
             Argument decoupled_lr. Separate learning rate for the input and output layer
         decoupled_min_lr (`float`):
-            Argument decoupled_min_lr. Minimum value for learning rate for the input and output layer.
-            The schedulerclip values below this threshold
+            Argument decoupled_min_lr. Minimum value for learning rate for the input and output layer. The
+            schedulerclip values below this threshold
         save (`str`):
             Argument save. Output directory to save checkpoints to.
         save_interval (`int`):
@@ -402,10 +400,9 @@ class MegatronConfig(PretrainedConfig):
         non_persistent_save_interval (`int`):
             Argument non_persistent_save_interval. Number of iterations between non-persistent saves.
         non_persistent_ckpt_type (`str`):
-            Argument non_persistent_ckpt_type. Type of non-persistent model checkpoints. "global" - Saved as a
-            standard checkpoint (e.g., on Lustre) with old checkpoints being removed. "local" - Each rank saves
-            a portion of the checkpoint locally (e.g., on SSD/ramdisk). None - No non-persistent checkpointing
-            (default option).
+            Argument non_persistent_ckpt_type. Type of non-persistent model checkpoints. "global" - Saved as a standard
+            checkpoint (e.g., on Lustre) with old checkpoints being removed. "local" - Each rank saves a portion of the
+            checkpoint locally (e.g., on SSD/ramdisk). None - No non-persistent checkpointing (default option).
         non_persistent_global_ckpt_dir (`str`):
             Argument non_persistent_global_ckpt_dir. Directory containing global non-persistent model checkpoints.
         non_persistent_local_ckpt_dir (`str`):
@@ -413,15 +410,15 @@ class MegatronConfig(PretrainedConfig):
         non_persistent_local_ckpt_algo (`str`, *optional*, defaults to "fully_parallel"):
             Argument non_persistent_local_ckpt_algo. Algorithm for local non-persistent checkpointing.
         finetune (`bool`, *optional*, defaults to `False`):
-            Argument finetune. Load model for finetuning. Do not load optimizer or rng state from checkpoint and
-            set iteration to 0. Assumed when loading a release checkpoint.
+            Argument finetune. Load model for finetuning. Do not load optimizer or rng state from checkpoint and set
+            iteration to 0. Assumed when loading a release checkpoint.
         pretrained_checkpoint (`str`):
             Argument pretrained_checkpoint. Directory containing a pretrained model checkpoint for finetuning.
         ckpt_step (`int`):
             Argument ckpt_step. Checkpoint step to load model from.
         perform_initialization (`bool`, *optional*, defaults to `True`):
-            Argument perform_initialization. Do not perform initialization when building model, can reduce startup
-            time when definitely loading from a checkpoint
+            Argument perform_initialization. Do not perform initialization when building model, can reduce startup time
+            when definitely loading from a checkpoint
         use_checkpoint_args (`bool`, *optional*, defaults to `False`):
             Argument use_checkpoint_args. Override model-related command-line arguments with arguments from checkpoint
         use_mp_args_from_checkpoint_args (`bool`, *optional*, defaults to `False`):
@@ -429,52 +426,50 @@ class MegatronConfig(PretrainedConfig):
         use_tokenizer_model_from_checkpoint_args (`bool`, *optional*, defaults to `True`):
             Argument use_tokenizer_model_from_checkpoint_args. If set, do not use tokenizer model path from checkpoint
         exit_on_missing_checkpoint (`bool`, *optional*, defaults to `False`):
-            Argument exit_on_missing_checkpoint. If '--load' is set, but checkpoint is not found (e.g., path
-            typo), then exit instead of random initialization.
+            Argument exit_on_missing_checkpoint. If '--load' is set, but checkpoint is not found (e.g., path typo),
+            then exit instead of random initialization.
         use_dist_ckpt_deprecated (`bool`, *optional*, defaults to `False`):
             Argument use_dist_ckpt_deprecated. Deprecated: see --ckpt-format.
         use_persistent_ckpt_worker (`bool`, *optional*, defaults to `False`):
             Argument use_persistent_ckpt_worker. Enables a persitent checkpoint worker for async save
         auto_detect_ckpt_format (`bool`, *optional*, defaults to `False`):
-            Argument auto_detect_ckpt_format. Determine if the checkpoint format is in legacy or distributed format.
-            If False, expects distributed checkpoint iff args.ckpt_format != "torch". Might slow down loading a
-            bit (double rank0 ckpt load).
+            Argument auto_detect_ckpt_format. Determine if the checkpoint format is in legacy or distributed format. If
+            False, expects distributed checkpoint iff args.ckpt_format != "torch". Might slow down loading a bit
+            (double rank0 ckpt load).
         dist_ckpt_format_deprecated (`str`):
             Argument dist_ckpt_format_deprecated. Deprecated: see --ckpt-format.
         ckpt_format (`str`, *optional*, defaults to "torch_dist"):
-            Argument ckpt_format. Checkpoint format to use. torch is the format used by torch.save/load. torch_dist
-            is a megatron built-in distributed checkpointing format. torch_dcp is the
-            torch.distributed.checkpoint format.
+            Argument ckpt_format. Checkpoint format to use. torch is the format used by torch.save/load. torch_dist is
+            a megatron built-in distributed checkpointing format. torch_dcp is the torch.distributed.checkpoint format.
         ckpt_convert_format (`str`):
             Argument ckpt_convert_format. Checkpoint format for conversion.
         ckpt_convert_save (`str`):
             Argument ckpt_convert_save. Save directory for converted checkpoint.
         ckpt_convert_update_legacy_dist_opt_format (`bool`, *optional*, defaults to `False`):
-            Argument ckpt_convert_update_legacy_dist_opt_format. When loading a checkpoint, update the legacy
-            format for the distributed optimizer, which previously used a merged param/grad buffer and a
-            different bucket mapping. The legacy format was deprecated on Feb 13, 2024.
+            Argument ckpt_convert_update_legacy_dist_opt_format. When loading a checkpoint, update the legacy format
+            for the distributed optimizer, which previously used a merged param/grad buffer and a different bucket
+            mapping. The legacy format was deprecated on Feb 13, 2024.
         ckpt_fully_parallel_save_deprecated (`bool`, *optional*, defaults to `False`):
             Argument ckpt_fully_parallel_save_deprecated. Deprecated: see --no-ckpt-fully-parallel-save.
         ckpt_fully_parallel_save (`bool`, *optional*, defaults to `True`):
-            Argument ckpt_fully_parallel_save. Disable applying full save parallelization across DP for
-            distributed checkpoints. Depending on ckpt format might decrease the number of files in the
-            checkpoint. Makes DistributedOptimizer checkpoint non-reshardable.
+            Argument ckpt_fully_parallel_save. Disable applying full save parallelization across DP for distributed
+            checkpoints. Depending on ckpt format might decrease the number of files in the checkpoint. Makes
+            DistributedOptimizer checkpoint non-reshardable.
         async_save (`bool`):
-            Argument async_save. Apply async checkpointing save. Currently works only with`torch_dist`
-            distributed checkpoint format.
+            Argument async_save. Apply async checkpointing save. Currently works only with`torch_dist` distributed
+            checkpoint format.
         ckpt_fully_parallel_load (`bool`, *optional*, defaults to `False`):
             Argument ckpt_fully_parallel_load. Apply full load parallelization across DP for distributed checkpoints.
         ckpt_assume_constant_structure (`bool`, *optional*, defaults to `False`):
-            Argument ckpt_assume_constant_structure. If the model and optimizer state dict structure
-            isconstant throughout a *single training job*, it allows fordifferent checkpointing
-            performance optimizations.
+            Argument ckpt_assume_constant_structure. If the model and optimizer state dict structure isconstant
+            throughout a *single training job*, it allows fordifferent checkpointing performance optimizations.
         dist_ckpt_strictness (`str`, *optional*, defaults to "assume_ok_unexpected"):
-            Argument dist_ckpt_strictness. Determine handling of key mismatch during checkpoint load.
-            Check StrictHandling docs for flags meaning. NOTE: This flag controls only distributed checkpoint load
-            from storage, not loading state dict into the model.
+            Argument dist_ckpt_strictness. Determine handling of key mismatch during checkpoint load. Check
+            StrictHandling docs for flags meaning. NOTE: This flag controls only distributed checkpoint load from
+            storage, not loading state dict into the model.
         load_model_opt_format (`bool`, *optional*, defaults to `False`):
-            Argument load_model_opt_format. Load a checkpoint for TensorRT model optimizer
-            (nvidia-modelopt).This function can also be used to load NeMo .nemo sharded checkpoints.
+            Argument load_model_opt_format. Load a checkpoint for TensorRT model optimizer (nvidia-modelopt).This
+            function can also be used to load NeMo .nemo sharded checkpoints.
         fp16 (`bool`, *optional*, defaults to `False`):
             Argument fp16. Run model in fp16 mode.
         bf16 (`bool`, *optional*, defaults to `False`):
@@ -482,8 +477,8 @@ class MegatronConfig(PretrainedConfig):
         grad_reduce_in_bf16 (`bool`, *optional*, defaults to `False`):
             Argument grad_reduce_in_bf16. Reduce gradients in bfloat16.
         loss_scale (`float`):
-            Argument loss_scale. Static loss scaling, positive power of 2 values can improve fp16 convergence. If
-            None, dynamicloss scaling is used.
+            Argument loss_scale. Static loss scaling, positive power of 2 values can improve fp16 convergence. If None,
+            dynamicloss scaling is used.
         initial_loss_scale (`float`, *optional*, defaults to 4294967296):
             Argument initial_loss_scale. Initial loss-scale for dynamic loss scaling.
         min_loss_scale (`float`, *optional*, defaults to 1.0):
@@ -495,8 +490,8 @@ class MegatronConfig(PretrainedConfig):
         fp32_residual_connection (`bool`, *optional*, defaults to `False`):
             Argument fp32_residual_connection. Move residual connections to fp32.
         apply_query_key_layer_scaling (`bool`, *optional*, defaults to `False`):
-            Argument apply_query_key_layer_scaling. Scale Q * K^T by 1 / layer-number. Useful for fp16 training.
-            Also sets `attention_softmax_in_fp32` to True.
+            Argument apply_query_key_layer_scaling. Scale Q * K^T by 1 / layer-number. Useful for fp16 training. Also
+            sets `attention_softmax_in_fp32` to True.
         attention_softmax_in_fp32 (`bool`, *optional*, defaults to `False`):
             Argument attention_softmax_in_fp32. Run attention masking and softmax in fp32.
         accumulate_allreduce_grads_in_fp32 (`bool`, *optional*, defaults to `False`):
@@ -504,45 +499,44 @@ class MegatronConfig(PretrainedConfig):
         fp16_lm_cross_entropy (`bool`, *optional*, defaults to `False`):
             Argument fp16_lm_cross_entropy. Move the cross entropy unreduced loss calculationfor lm head to fp16.
         disable_bf16_reduced_precision_matmul (`bool`, *optional*, defaults to `False`):
-            Argument disable_bf16_reduced_precision_matmul. If True,
-            sets torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction=False to prevent matmul from
-            using reduced precision accumulation when using BF16.
+            Argument disable_bf16_reduced_precision_matmul. If True, sets
+            torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction=False to prevent matmul from using
+            reduced precision accumulation when using BF16.
         reuse_grad_buf_for_mxfp8_param_ag (`bool`, *optional*, defaults to `False`):
             Argument reuse_grad_buf_for_mxfp8_param_ag. If True, reuse the grad buffer for MXFP8 parameter all-gather.
         tensor_model_parallel_size (`int`, *optional*, defaults to 1):
             Argument tensor_model_parallel_size. Degree of tensor model parallelism.
         encoder_tensor_model_parallel_size (`int`, *optional*, defaults to 0):
-            Argument encoder_tensor_model_parallel_size. DEPRECATED (will be removed in core_r0.14.0): Use
-            orthotope parallelism management instead. Degree of tensor model parallelism for the encoder.
+            Argument encoder_tensor_model_parallel_size. DEPRECATED (will be removed in core_r0.14.0): Use orthotope
+            parallelism management instead. Degree of tensor model parallelism for the encoder.
         pipeline_model_parallel_size (`int`, *optional*, defaults to 1):
             Argument pipeline_model_parallel_size. Degree of pipeline model parallelism.
         encoder_pipeline_model_parallel_size (`int`, *optional*, defaults to 0):
-            Argument encoder_pipeline_model_parallel_size. DEPRECATED (will be removed in core_r0.14.0): Use
-            orthotope parallelism management instead. Degree of pipeline model parallelism in the encoder. This
-            is independent of the amount of pipeline in the decoder.
+            Argument encoder_pipeline_model_parallel_size. DEPRECATED (will be removed in core_r0.14.0): Use orthotope
+            parallelism management instead. Degree of pipeline model parallelism in the encoder. This is independent of
+            the amount of pipeline in the decoder.
         pipeline_model_parallel_split_rank (`int`):
-            Argument pipeline_model_parallel_split_rank. Rank where encoder and decoder should be split.
-            Deprecated; use --encoder-pipeline-model-parallel-size instead.
+            Argument pipeline_model_parallel_split_rank. Rank where encoder and decoder should be split. Deprecated;
+            use --encoder-pipeline-model-parallel-size instead.
         decoder_first_pipeline_num_layers (`int`):
-            Argument decoder_first_pipeline_num_layers. The number of transformer layers on the first pipeline stage
-            of the decoder. Default None is even split of transformer layers across all pipeline stages
+            Argument decoder_first_pipeline_num_layers. The number of transformer layers on the first pipeline stage of
+            the decoder. Default None is even split of transformer layers across all pipeline stages
         decoder_last_pipeline_num_layers (`int`):
-            Argument decoder_last_pipeline_num_layers. The number of transformer layers on the last pipeline stage
-            of the decoder. Default None is even split of transformer layers across all pipeline stages
+            Argument decoder_last_pipeline_num_layers. The number of transformer layers on the last pipeline stage of
+            the decoder. Default None is even split of transformer layers across all pipeline stages
         pipeline_model_parallel_layout (`str`):
-            Argument pipeline_model_parallel_layout. A string that describes a custom pipeline model parallel
-            layout. e.g., "E|(t|)*3,m|m||L". E, L, t, m denotes embedding, loss, transformer decoder layer, and
-            mtp layer, respectively. Stages are split by "|". Replicated stages or layers can be described
-            with multiplication. Commas can be used cosmetically. Default None is not using this argument to set
-            the layout.
+            Argument pipeline_model_parallel_layout. A string that describes a custom pipeline model parallel layout.
+            e.g., "E|(t|)*3,m|m||L". E, L, t, m denotes embedding, loss, transformer decoder layer, and mtp layer,
+            respectively. Stages are split by "|". Replicated stages or layers can be described with multiplication.
+            Commas can be used cosmetically. Default None is not using this argument to set the layout.
         model_parallel_size (`int`):
-            Argument model_parallel_size. Old model parallel argument, do not use. Use
-            --tensor-model-parallel-size instead.
+            Argument model_parallel_size. Old model parallel argument, do not use. Use --tensor-model-parallel-size
+            instead.
         num_layers_per_virtual_pipeline_stage (`int`):
             Argument num_layers_per_virtual_pipeline_stage. Number of layers per virtual pipeline stage
         num_virtual_stages_per_pipeline_rank (`int`):
-            Argument num_virtual_stages_per_pipeline_rank. Number of virtual pipeline stages per pipeline
-            parallelism rank
+            Argument num_virtual_stages_per_pipeline_rank. Number of virtual pipeline stages per pipeline parallelism
+            rank
         microbatch_group_size_per_vp_stage (`int`):
             Argument microbatch_group_size_per_vp_stage. Number of contiguous microbatches per virtual pipeline stage
         overlap_p2p_comm (`bool`, *optional*, defaults to `True`):
@@ -556,58 +550,56 @@ class MegatronConfig(PretrainedConfig):
         overlap_grad_reduce (`bool`, *optional*, defaults to `False`):
             Argument overlap_grad_reduce. If set, overlap DDP grad reduce.
         defer_embedding_wgrad_compute (`bool`, *optional*, defaults to `False`):
-            Argument defer_embedding_wgrad_compute. If set, defers the vocabulary projection linear
-            layer weightgradient compute to pipeline flush.
+            Argument defer_embedding_wgrad_compute. If set, defers the vocabulary projection linear layer
+            weightgradient compute to pipeline flush.
         wgrad_deferral_limit (`int`, *optional*, defaults to 0):
-            Argument wgrad_deferral_limit. Number of micro-batches for whichweight gradient computation of
-            vocabulary projection is deferred, defaults to 0 whichmeans all the micro-batches are deferred. Invalid
-            if `defer-embedding-wgrad-compute`is not set
+            Argument wgrad_deferral_limit. Number of micro-batches for whichweight gradient computation of vocabulary
+            projection is deferred, defaults to 0 whichmeans all the micro-batches are deferred. Invalid if
+            `defer-embedding-wgrad-compute`is not set
         align_grad_reduce (`bool`, *optional*, defaults to `True`):
-            Argument align_grad_reduce. If not set, all PP stages will launch gradient reduces
-            simultaneously. Otherwise, each PP stage will independently launch as needed.
+            Argument align_grad_reduce. If not set, all PP stages will launch gradient reduces simultaneously.
+            Otherwise, each PP stage will independently launch as needed.
         ddp_num_buckets (`int`):
             Argument ddp_num_buckets. Number of buckets for data-parallel communication
         ddp_bucket_size (`int`):
             Argument ddp_bucket_size. Bucket size for data-parallel communication
         ddp_pad_buckets_for_high_nccl_busbw (`bool`, *optional*, defaults to `False`):
-            Argument ddp_pad_buckets_for_high_nccl_busbw. If set, make sure the bucket size is divisible by a
-            large power of 2 (2^16) to ensure NCCL collectives have high bus bandwidth at large DP counts, since
-            NCCL message size (which for ring algorithms is bucket_size / dp_size) apparently needs to be divisible
-            by a power of 2 for high busbw.
+            Argument ddp_pad_buckets_for_high_nccl_busbw. If set, make sure the bucket size is divisible by a large
+            power of 2 (2^16) to ensure NCCL collectives have high bus bandwidth at large DP counts, since NCCL message
+            size (which for ring algorithms is bucket_size / dp_size) apparently needs to be divisible by a power of 2
+            for high busbw.
         ddp_average_in_collective (`bool`, *optional*, defaults to `False`):
             Argument ddp_average_in_collective. If set, average directly in data-parallel communication collective.
         overlap_param_gather (`bool`, *optional*, defaults to `False`):
             Argument overlap_param_gather. If set, overlap param all-gather in distributed optimizer.
         overlap_param_gather_with_optimizer_step (`bool`, *optional*, defaults to `False`):
-            Argument overlap_param_gather_with_optimizer_step. If set, overlap param all-gather of first bucket
-            with optimizer step.
+            Argument overlap_param_gather_with_optimizer_step. If set, overlap param all-gather of first bucket with
+            optimizer step.
         align_param_gather (`bool`, *optional*, defaults to `True`):
-            Argument align_param_gather. If not set, all PP stages will launch param all-gathers
-            simultaneously. Otherwise, each PP stage will independently launch as needed.
+            Argument align_param_gather. If not set, all PP stages will launch param all-gathers simultaneously.
+            Otherwise, each PP stage will independently launch as needed.
         scatter_gather_tensors_in_pipeline (`bool`, *optional*, defaults to `True`):
-            Argument scatter_gather_tensors_in_pipeline. If not set, use scatter/gather to optimize communication
-            of tensors in pipeline.
+            Argument scatter_gather_tensors_in_pipeline. If not set, use scatter/gather to optimize communication of
+            tensors in pipeline.
         use_ring_exchange_p2p (`bool`, *optional*, defaults to `False`):
-            Argument use_ring_exchange_p2p. If set, use custom-built ring exchange for p2p communications. Note
-            that this option will require a custom built image that support ring-exchange p2p.
+            Argument use_ring_exchange_p2p. If set, use custom-built ring exchange for p2p communications. Note that
+            this option will require a custom built image that support ring-exchange p2p.
         local_rank (`int`, *optional*, defaults to 0):
             Argument local_rank. local rank passed from distributed launcher.
         lazy_mpu_init (`bool`):
-            Argument lazy_mpu_init. If set to True, initialize_megatron() skips DDP initialization and returns
-            function to complete it instead. Also turns on --use-cpu-initialization flag. This is for external
-            DDP manager.
+            Argument lazy_mpu_init. If set to True, initialize_megatron() skips DDP initialization and returns function
+            to complete it instead. Also turns on --use-cpu-initialization flag. This is for external DDP manager.
         account_for_embedding_in_pipeline_split (`bool`, *optional*, defaults to `False`):
-            Argument account_for_embedding_in_pipeline_split. If set, *input* embedding layer will be treated as
-            a standard transformerlayer in the context of partition and placement for pipeline parallelism.
-        account_for_loss_in_pipeline_split (`bool`, *optional*, defaults to `False`):
-            Argument account_for_loss_in_pipeline_split. If set, loss layer will be treated as a
+            Argument account_for_embedding_in_pipeline_split. If set, *input* embedding layer will be treated as a
             standard transformerlayer in the context of partition and placement for pipeline parallelism.
+        account_for_loss_in_pipeline_split (`bool`, *optional*, defaults to `False`):
+            Argument account_for_loss_in_pipeline_split. If set, loss layer will be treated as a standard
+            transformerlayer in the context of partition and placement for pipeline parallelism.
         use_distributed_optimizer (`bool`, *optional*, defaults to `False`):
             Argument use_distributed_optimizer. Use distributed optimizer.
         nccl_ub (`bool`, *optional*, defaults to `False`):
-            Argument nccl_ub. Use the userbuffer registration for DP/FSDP communication buffers.This option will
-            reduce GPU SM usage for the DP/FSDP communication,which is improving the performance of the
-            overlapped computation.
+            Argument nccl_ub. Use the userbuffer registration for DP/FSDP communication buffers.This option will reduce
+            GPU SM usage for the DP/FSDP communication,which is improving the performance of the overlapped computation.
         use_sharp (`bool`, *optional*, defaults to `False`):
             Argument use_sharp. Required to enable SHARP communication.
         use_custom_fsdp (`bool`, *optional*, defaults to `False`):
@@ -619,52 +611,51 @@ class MegatronConfig(PretrainedConfig):
         gradient_reduce_div_fusion (`bool`, *optional*, defaults to `True`):
             Argument gradient_reduce_div_fusion. If not set, fuse the division in gradient reduce.
         fsdp_double_buffer (`bool`, *optional*, defaults to `False`):
-            Argument fsdp_double_buffer. Enable double buffering for temporary memory needed for custom
-            FSDP communications. Double-buffering the communication memory improves memory management efficiency
-            by reusing previously allocated buffers, rather than creating new buffers for each FSDP communication.
-            This is required for user buffer registration and is enabled by default when using NCCL user buffers.
+            Argument fsdp_double_buffer. Enable double buffering for temporary memory needed for custom FSDP
+            communications. Double-buffering the communication memory improves memory management efficiency by reusing
+            previously allocated buffers, rather than creating new buffers for each FSDP communication. This is
+            required for user buffer registration and is enabled by default when using NCCL user buffers.
         suggested_communication_unit_size (`int`):
-            Argument suggested_communication_unit_size. Specifies the number of elements to communicate at once
-            during FSDP (Fully Sharded Data Parallel) operations. This flag also affects FSDP all-gather
-            prefetch behavior. Setting a larger value increases the communication buffer size, while a smaller
-            value disables prefetching and may degrade performance. Adjust this value based on your system's memory
-            and performance requirements.
+            Argument suggested_communication_unit_size. Specifies the number of elements to communicate at once during
+            FSDP (Fully Sharded Data Parallel) operations. This flag also affects FSDP all-gather prefetch behavior.
+            Setting a larger value increases the communication buffer size, while a smaller value disables prefetching
+            and may degrade performance. Adjust this value based on your system's memory and performance requirements.
         keep_fp8_transpose_cache_when_using_custom_fsdp (`bool`, *optional*, defaults to `False`):
-            Argument keep_fp8_transpose_cache_when_using_custom_fsdp. If set, keep the fp8 transpose cache when
-            using custom FSDP.
+            Argument keep_fp8_transpose_cache_when_using_custom_fsdp. If set, keep the fp8 transpose cache when using
+            custom FSDP.
         num_distributed_optimizer_instances (`int`, *optional*, defaults to 1):
-            Argument num_distributed_optimizer_instances. Number of Distributed Optimizer copies across Data
-            Parallel domain.
+            Argument num_distributed_optimizer_instances. Number of Distributed Optimizer copies across Data Parallel
+            domain.
         use_torch_fsdp2 (`bool`, *optional*, defaults to `False`):
-            Argument use_torch_fsdp2. Use the torch FSDP2 implementation. FSDP2 has not been tested with
-            pipeline parallelism, and may contain bugs.
+            Argument use_torch_fsdp2. Use the torch FSDP2 implementation. FSDP2 has not been tested with pipeline
+            parallelism, and may contain bugs.
         torch_fsdp2_reshard_after_forward (`bool`, *optional*, defaults to `True`):
-            Argument torch_fsdp2_reshard_after_forward. Whether to reshard weights after forward pass when
-            using PyTorch FSDP2. Set to enable FSDP ZeRO-2.
+            Argument torch_fsdp2_reshard_after_forward. Whether to reshard weights after forward pass when using
+            PyTorch FSDP2. Set to enable FSDP ZeRO-2.
         context_parallel_size (`int`, *optional*, defaults to 1):
             Argument context_parallel_size. Degree of context parallelism.
         cp_comm_type (`list[str]`, *optional*, defaults to ['p2p']):
-            Argument cp_comm_type. Inter-gpu communication type for context parallelism: p2p, a2a, allgather
-            or a2a+p2p. If a single string is provided, all layers will share the same communication type. Users
-            can also specify separated types for each layer like --cp-comm-type p2p p2p a2a a2a a2a+p2p a2a+p2p
+            Argument cp_comm_type. Inter-gpu communication type for context parallelism: p2p, a2a, allgather or
+            a2a+p2p. If a single string is provided, all layers will share the same communication type. Users can also
+            specify separated types for each layer like --cp-comm-type p2p p2p a2a a2a a2a+p2p a2a+p2p
         hierarchical_context_parallel_sizes (`list[int]`):
-            Argument hierarchical_context_parallel_sizes. Degrees of the hierarchical context parallelism. Users
-            should provide a list to specify the sizes for different levels. --hierarchical-context-parallel-sizes 2
-            4 indicates every two adjacent gpus forms the first level of cp groups and the cp ranks with the
-            same odevity forms the second level of cp groups.
+            Argument hierarchical_context_parallel_sizes. Degrees of the hierarchical context parallelism. Users should
+            provide a list to specify the sizes for different levels. --hierarchical-context-parallel-sizes 2 4
+            indicates every two adjacent gpus forms the first level of cp groups and the cp ranks with the same odevity
+            forms the second level of cp groups.
         nccl_communicator_config_path (`str`):
-            Argument nccl_communicator_config_path. Path to the yaml file with NCCL communicator configurations.
-            The number of min/max thread groups and thread group cluster size of each communicator can be configured
-            by setting `min_ctas`, `max_ctas`, and `cga_cluster_size`.
+            Argument nccl_communicator_config_path. Path to the yaml file with NCCL communicator configurations. The
+            number of min/max thread groups and thread group cluster size of each communicator can be configured by
+            setting `min_ctas`, `max_ctas`, and `cga_cluster_size`.
         use_tp_pp_dp_mapping (`bool`, *optional*, defaults to `False`):
-            Argument use_tp_pp_dp_mapping. If set, distributed ranks initialize order is changed from tp-cp-ep-dp-pp
-            to tp-cp-ep-pp-dp.
+            Argument use_tp_pp_dp_mapping. If set, distributed ranks initialize order is changed from tp-cp-ep-dp-pp to
+            tp-cp-ep-pp-dp.
         replication (`bool`, *optional*, defaults to `False`):
             Argument replication. If set, replication of local checkpoints is enabled. Needs to be enabled on all ranks.
         replication_jump (`int`):
-            Argument replication_jump. Specifies `J`, the spacing between ranks storing replicas of a given
-            rank's data. Replicas for rank `n` may be on ranks `n+J`, `n+2J`, ..., or `n-J`, `n-2J`, etc. This flag
-            has an effect only if --replication is used. and must be consistent across all ranks.
+            Argument replication_jump. Specifies `J`, the spacing between ranks storing replicas of a given rank's
+            data. Replicas for rank `n` may be on ranks `n+J`, `n+2J`, ..., or `n-J`, `n-2J`, etc. This flag has an
+            effect only if --replication is used. and must be consistent across all ranks.
         replication_factor (`int`, *optional*, defaults to 2):
             Argument replication_factor. Number of machines storing the replica of a given rank's data.
         eval_iters (`int`, *optional*, defaults to 100):
@@ -674,46 +665,46 @@ class MegatronConfig(PretrainedConfig):
         test_mode (`bool`, *optional*, defaults to `False`):
             Argument test_mode. Run all real-time test alongside the experiment.
         skip_train (`bool`, *optional*, defaults to `False`):
-            Argument skip_train. If set, bypass the training loop, optionally do evaluation for validation/test,
-            and exit.
+            Argument skip_train. If set, bypass the training loop, optionally do evaluation for validation/test, and
+            exit.
         data_path (`list[str]`):
-            Argument data_path. The weight and prefix list for a set of train, validation, and testdatasets which
-            split according to --split. The accepted formats are: (1) a single prefix, (2) a list of weight
-            prefix pairs e.g. weight1 prefix1 weight2 prefix2, (3) a list of prefixes e.g. prefix1 prefix2. For
-            (3), weights are inferred from the lengths of the contributing datasets. This argument is exclusive to
-            the other independent --*-data-path arguments.
+            Argument data_path. The weight and prefix list for a set of train, validation, and testdatasets which split
+            according to --split. The accepted formats are: (1) a single prefix, (2) a list of weight prefix pairs e.g.
+            weight1 prefix1 weight2 prefix2, (3) a list of prefixes e.g. prefix1 prefix2. For (3), weights are inferred
+            from the lengths of the contributing datasets. This argument is exclusive to the other independent
+            --*-data-path arguments.
         split (`str`):
-            Argument split. Comma-separated list of proportions for training, validation, and test split. For
-            example the split `90,5,5` will use 90%% of data for training, 5%% for validation and 5%% for test.
+            Argument split. Comma-separated list of proportions for training, validation, and test split. For example
+            the split `90,5,5` will use 90%% of data for training, 5%% for validation and 5%% for test.
         train_data_path (`list[str]`):
-            Argument train_data_path. The weight and prefix list for an independent train dataset. Follows the
-            same pattern rules as --data-path.
+            Argument train_data_path. The weight and prefix list for an independent train dataset. Follows the same
+            pattern rules as --data-path.
         valid_data_path (`list[str]`):
-            Argument valid_data_path. The weight and prefix list for an independent validation dataset. Follows
-            the same pattern rules as --data-path.
-        test_data_path (`list[str]`):
-            Argument test_data_path. The weight and prefix list for an independent test dataset. Follows the
+            Argument valid_data_path. The weight and prefix list for an independent validation dataset. Follows the
             same pattern rules as --data-path.
+        test_data_path (`list[str]`):
+            Argument test_data_path. The weight and prefix list for an independent test dataset. Follows the same
+            pattern rules as --data-path.
         data_args_path (`str`):
-            Argument data_args_path. Path to data-args. Instead of feeding `--data-path` with weighted dataset, we
-            pass in a file path from which we read that argument. This is useful when the list of data is too big.
+            Argument data_args_path. Path to data-args. Instead of feeding `--data-path` with weighted dataset, we pass
+            in a file path from which we read that argument. This is useful when the list of data is too big.
         per_split_data_args_path (`str`):
-            Argument per_split_data_args_path. Path to per-split-data-args. Instead of
-            feeding `--(train|valid|test)-data-path` with weighted dataset, we pass in a file path from which we
-            read those arguments. This is useful when the list of data is too big. Format is a json file with
-            `train`, `valid, `test` keys
+            Argument per_split_data_args_path. Path to per-split-data-args. Instead of feeding
+            `--(train|valid|test)-data-path` with weighted dataset, we pass in a file path from which we read those
+            arguments. This is useful when the list of data is too big. Format is a json file with `train`, `valid,
+            `test` keys
         data_cache_path (`str`):
             Argument data_cache_path. Path to a directory to hold cached index files.
         mmap_bin_files (`bool`, *optional*, defaults to `True`):
             Argument mmap_bin_files. Disable mmap-ing of .bin files.
         mock_data (`bool`, *optional*, defaults to `False`):
-            Argument mock_data. Skip data loading and validation and opt for artificial generation of mock data when
-            an implementation is available.
+            Argument mock_data. Skip data loading and validation and opt for artificial generation of mock data when an
+            implementation is available.
         seq_length (`int`):
             Argument seq_length. Maximum sequence length to process.
         encoder_seq_length (`int`):
-            Argument encoder_seq_length. Maximum encoder sequence length to process.This should be exclusive
-            of --seq-length
+            Argument encoder_seq_length. Maximum encoder sequence length to process.This should be exclusive of
+            --seq-length
         decoder_seq_length (`int`):
             Argument decoder_seq_length. Maximum decoder sequence length to process.
         retriever_seq_length (`int`, *optional*, defaults to 256):
@@ -747,8 +738,8 @@ class MegatronConfig(PretrainedConfig):
         merge_file (`str`):
             Argument merge_file. Path to the BPE merge file.
         vocab_extra_ids (`int`, *optional*, defaults to 0):
-            Argument vocab_extra_ids. Number of additional vocabulary tokens. They are used for span masking in the
-            T5 model
+            Argument vocab_extra_ids. Number of additional vocabulary tokens. They are used for span masking in the T5
+            model
         tokenizer_type (`str`):
             Argument tokenizer_type. What type of tokenizer to use.
         tokenizer_model (`str`):
@@ -768,8 +759,8 @@ class MegatronConfig(PretrainedConfig):
         biencoder_projection_dim (`int`, *optional*, defaults to 0):
             Argument biencoder_projection_dim. Size of projection head used in biencoder (paper default: 128)
         biencoder_shared_query_context_model (`bool`, *optional*, defaults to `False`):
-            Argument biencoder_shared_query_context_model. Whether to share the parameters of the query and
-            context models or not
+            Argument biencoder_shared_query_context_model. Whether to share the parameters of the query and context
+            models or not
         ict_load (`str`):
             Argument ict_load. Directory containing an ICTBertModel checkpoint
         bert_load (`str`):
@@ -851,140 +842,137 @@ class MegatronConfig(PretrainedConfig):
         expert_model_parallel_size (`int`, *optional*, defaults to 1):
             Argument expert_model_parallel_size. Degree of expert model parallelism.
         expert_tensor_parallel_size (`int`):
-            Argument expert_tensor_parallel_size. Degree of expert model parallelism. Default is None, which will
-            be set to the value of --tensor-model-paralle-size.
+            Argument expert_tensor_parallel_size. Degree of expert model parallelism. Default is None, which will be
+            set to the value of --tensor-model-paralle-size.
         num_experts (`int`):
             Argument num_experts. Number of Experts in MoE (None means no MoE)
         moe_layer_freq (`Any`, *optional*, defaults to 1):
-            Argument moe_layer_freq. Frequency between MoE layers and Dense layers. Accepts either: - An integer
-            N: Represents a 1:N ratio, meaning one expert layer for every N-1 dense layers - A string containing
-            a Python list expression that defines a custom pattern, e.g.: "([1]*3+[0]*1)*3" evaluates
-            to [1,1,1,0,1,1,1,0,1,1,1,0] where 1 indicates an expert layer and 0 indicates a dense layer.
-            Examples: "([0]+[1]*23)": 1 dense layer followed by 23 experts layers, "([1]*3+[0]*2)*2": Three
-            expert layers followed by two dense layers, repeated twice.
+            Argument moe_layer_freq. Frequency between MoE layers and Dense layers. Accepts either: - An integer N:
+            Represents a 1:N ratio, meaning one expert layer for every N-1 dense layers - A string containing a Python
+            list expression that defines a custom pattern, e.g.: "([1]*3+[0]*1)*3" evaluates to
+            [1,1,1,0,1,1,1,0,1,1,1,0] where 1 indicates an expert layer and 0 indicates a dense layer. Examples:
+            "([0]+[1]*23)": 1 dense layer followed by 23 experts layers, "([1]*3+[0]*2)*2": Three expert layers
+            followed by two dense layers, repeated twice.
         moe_ffn_hidden_size (`int`):
-            Argument moe_ffn_hidden_size. The hidden size of each expert's feed-forward network (ffn). If
-            not specified, defaults to the ffn_hidden_size.
+            Argument moe_ffn_hidden_size. The hidden size of each expert's feed-forward network (ffn). If not
+            specified, defaults to the ffn_hidden_size.
         moe_shared_expert_intermediate_size (`int`):
-            Argument moe_shared_expert_intermediate_size. Shared expert total ffn hidden size. It should be equal
-            to "num_shared_experts * ffn_size_of_each_shared_expert" if there are multiple shared experts. None
-            means no shared expert.
+            Argument moe_shared_expert_intermediate_size. Shared expert total ffn hidden size. It should be equal to
+            "num_shared_experts * ffn_size_of_each_shared_expert" if there are multiple shared experts. None means no
+            shared expert.
         moe_shared_expert_overlap (`bool`, *optional*, defaults to `False`):
-            Argument moe_shared_expert_overlap. Enable overlapping between shared expert computations and
-            dispatcher communications. Without this, the shared epxerts execute after the routed experts.
-            Only effective when moe-shared-expert-intermediate-size is set.
+            Argument moe_shared_expert_overlap. Enable overlapping between shared expert computations and dispatcher
+            communications. Without this, the shared epxerts execute after the routed experts. Only effective when
+            moe-shared-expert-intermediate-size is set.
         moe_grouped_gemm (`bool`, *optional*, defaults to `False`):
-            Argument moe_grouped_gemm. When there are multiple experts per rank, launch multiple local GEMM kernels
-            in multiple streams to improve the utilization and performance with GroupedLinear in TransformerEngine.
+            Argument moe_grouped_gemm. When there are multiple experts per rank, launch multiple local GEMM kernels in
+            multiple streams to improve the utilization and performance with GroupedLinear in TransformerEngine.
         moe_use_legacy_grouped_gemm (`bool`, *optional*, defaults to `False`):
-            Argument moe_use_legacy_grouped_gemm. Use legacy GroupedMLP rather than TEGroupedMLP. Note: The legacy
-            one will be deprecated soon.
+            Argument moe_use_legacy_grouped_gemm. Use legacy GroupedMLP rather than TEGroupedMLP. Note: The legacy one
+            will be deprecated soon.
         moe_layer_recompute (`bool`, *optional*, defaults to `False`):
-            Argument moe_layer_recompute. Enable checkpointing for moe_layer, should be used when memory is
-            not sufficient. Deprecated. Use "--recompute-granularity selective --recompute-modules moe" instead.
+            Argument moe_layer_recompute. Enable checkpointing for moe_layer, should be used when memory is not
+            sufficient. Deprecated. Use "--recompute-granularity selective --recompute-modules moe" instead.
         moe_extended_tp (`bool`, *optional*, defaults to `False`):
             Argument moe_extended_tp. Deprecated. Use --expert-tensor-parallel-size instead.
         moe_use_upcycling (`bool`, *optional*, defaults to `False`):
-            Argument moe_use_upcycling. Load a checkpoint of a dense model, convert it into an MoE model, and save
-            the converted model to the path specified by --save. Upcycling is implemented on the top of
-            distributed checkpointing, so it supports parallel modes different from the dense model.
+            Argument moe_use_upcycling. Load a checkpoint of a dense model, convert it into an MoE model, and save the
+            converted model to the path specified by --save. Upcycling is implemented on the top of distributed
+            checkpointing, so it supports parallel modes different from the dense model.
         moe_router_load_balancing_type (`str`, *optional*, defaults to "aux_loss"):
-            Argument moe_router_load_balancing_type. Determines the load balancing strategy for the router.
-            "aux_loss" corresponds to the load balancing loss used in GShard and SwitchTransformer;
-            "seq_aux_loss" corresponds to the load balancing loss used in DeepSeekV2, which computes the loss for
-            each individual sample; "sinkhorn" corresponds to the balancing algorithm used in S-BASE, and
-            "none" implies no load balancing. The default is "aux_loss".
+            Argument moe_router_load_balancing_type. Determines the load balancing strategy for the router. "aux_loss"
+            corresponds to the load balancing loss used in GShard and SwitchTransformer; "seq_aux_loss" corresponds to
+            the load balancing loss used in DeepSeekV2, which computes the loss for each individual sample; "sinkhorn"
+            corresponds to the balancing algorithm used in S-BASE, and "none" implies no load balancing. The default is
+            "aux_loss".
         moe_router_dtype (`str`):
-            Argument moe_router_dtype. Data type for routing computation and expert output weighted
-            averaging. Fp32/fp64 enhances numerical stability, especially with numerous experts. The perf impact
-            should be negligible when used with permute fusion. None means no changes for dtype.
+            Argument moe_router_dtype. Data type for routing computation and expert output weighted averaging.
+            Fp32/fp64 enhances numerical stability, especially with numerous experts. The perf impact should be
+            negligible when used with permute fusion. None means no changes for dtype.
         moe_router_score_function (`str`, *optional*, defaults to "softmax"):
             Argument moe_router_score_function. Score function for MoE TopK routing. Can be "softmax" or "sigmoid".
         moe_router_topk (`int`, *optional*, defaults to 2):
             Argument moe_router_topk. Number of experts to route to for each token. The default is 2.
         moe_router_pre_softmax (`bool`, *optional*, defaults to `False`):
-            Argument moe_router_pre_softmax. Enable pre-softmax routing for MoE, which means softmax is before
-            the top-k selection. By default, softmax is done after top-k.
+            Argument moe_router_pre_softmax. Enable pre-softmax routing for MoE, which means softmax is before the
+            top-k selection. By default, softmax is done after top-k.
         moe_router_num_groups (`int`):
-            Argument moe_router_num_groups. Number of groups to divide experts into for group-limited routing.
-            When using group-limited routing: 1) Experts are divided into equal-sized groups, 2) For each token,
-            a subset of groups are selected based on routing scores (sum of top-2 expert scores within each group),
-            3) From these selected groups, moe_router_topk experts are chosen.Two common use cases: 1)
-            Device-limited routing: Set equal to expert parallel size (EP) to limit each token to experts on a
-            subset of devices (See DeepSeek-V2: https://arxiv.org/pdf/2405.04434) 2) Node-limited routing: Set equal
-            to number of nodes in EP group to limit each token to experts on a subset of nodes (See
-            DeepSeek-V3: https://arxiv.org/pdf/2412.19437)
+            Argument moe_router_num_groups. Number of groups to divide experts into for group-limited routing. When
+            using group-limited routing: 1) Experts are divided into equal-sized groups, 2) For each token, a subset of
+            groups are selected based on routing scores (sum of top-2 expert scores within each group), 3) From these
+            selected groups, moe_router_topk experts are chosen.Two common use cases: 1) Device-limited routing: Set
+            equal to expert parallel size (EP) to limit each token to experts on a subset of devices (See DeepSeek-V2:
+            https://arxiv.org/pdf/2405.04434) 2) Node-limited routing: Set equal to number of nodes in EP group to
+            limit each token to experts on a subset of nodes (See DeepSeek-V3: https://arxiv.org/pdf/2412.19437)
         moe_router_group_topk (`int`):
             Argument moe_router_group_topk. Number of selected groups for group-limited routing.
         moe_router_topk_scaling_factor (`float`):
-            Argument moe_router_topk_scaling_factor. Scaling factor for routing score in top-k selection, only
-            works when --moe-router-pre-softmax enabled. Defaults to None, which means no scaling.
+            Argument moe_router_topk_scaling_factor. Scaling factor for routing score in top-k selection, only works
+            when --moe-router-pre-softmax enabled. Defaults to None, which means no scaling.
         moe_router_enable_expert_bias (`bool`, *optional*, defaults to `False`):
-            Argument moe_router_enable_expert_bias. TopK routing with dynamic expert bias in the aux-loss-free
-            load balancing strategy. The routing decision is based on the sum of the routing scores and the
-            expert bias. See https://arxiv.org/abs/2408.15664 for details.
+            Argument moe_router_enable_expert_bias. TopK routing with dynamic expert bias in the aux-loss-free load
+            balancing strategy. The routing decision is based on the sum of the routing scores and the expert bias. See
+            https://arxiv.org/abs/2408.15664 for details.
         moe_router_bias_update_rate (`float`, *optional*, defaults to 0.001):
-            Argument moe_router_bias_update_rate. Expert bias update rate in the aux-loss-free load balancing
-            strategy. The expert bias is updated based on the number of assigned tokens to each expert in a
-            global batch, where the bias is increased for the experts with less assigned tokens and decreased for
-            the experts with more assigned tokens. The default value 1e-3 is same as that used in DeepSeekV3.
+            Argument moe_router_bias_update_rate. Expert bias update rate in the aux-loss-free load balancing strategy.
+            The expert bias is updated based on the number of assigned tokens to each expert in a global batch, where
+            the bias is increased for the experts with less assigned tokens and decreased for the experts with more
+            assigned tokens. The default value 1e-3 is same as that used in DeepSeekV3.
         moe_router_force_load_balancing (`bool`, *optional*, defaults to `False`):
-            Argument moe_router_force_load_balancing. [Experimental] Force override routing to balance
-            token distribution using random logits for MoE routers, supporting naive top-k and group-limited
-            top-k. This experimental feature is for benchmarking purposes only!
+            Argument moe_router_force_load_balancing. [Experimental] Force override routing to balance token
+            distribution using random logits for MoE routers, supporting naive top-k and group-limited top-k. This
+            experimental feature is for benchmarking purposes only!
         moe_router_padding_for_fp8 (`bool`, *optional*, defaults to `False`):
-            Argument moe_router_padding_for_fp8. Pad the routing_map to make sure the number of tokens each
-            expert received is a multiple of 16/32 for FP8 precision. It is suggested to enable this for
-            dropless training with FP8 precision when num_local_experts > 1. This is a more efficient way to pad
-            for FP8 which eliminates the explicit padding in the GroupedMLP layer.
+            Argument moe_router_padding_for_fp8. Pad the routing_map to make sure the number of tokens each expert
+            received is a multiple of 16/32 for FP8 precision. It is suggested to enable this for dropless training
+            with FP8 precision when num_local_experts > 1. This is a more efficient way to pad for FP8 which eliminates
+            the explicit padding in the GroupedMLP layer.
         moe_aux_loss_coeff (`float`, *optional*, defaults to 0.0):
             Argument moe_aux_loss_coeff. Scaling coefficient for the aux loss: a starting value of 1e-2 is recommended.
         moe_z_loss_coeff (`float`):
             Argument moe_z_loss_coeff. Scaling coefficient for the z-loss: a starting value of 1e-3 is recommended.
         moe_input_jitter_eps (`float`):
-            Argument moe_input_jitter_eps. Add noise to the input tensor by applying jitter with a specified
-            epsilon value.
+            Argument moe_input_jitter_eps. Add noise to the input tensor by applying jitter with a specified epsilon
+            value.
         moe_per_layer_logging (`bool`, *optional*, defaults to `False`):
-            Argument moe_per_layer_logging. Enable per-layer logging for MoE, currently supports auxiliary loss and
-            z loss.
+            Argument moe_per_layer_logging. Enable per-layer logging for MoE, currently supports auxiliary loss and z
+            loss.
         moe_token_dispatcher_type (`str`, *optional*, defaults to "allgather"):
-            Argument moe_token_dispatcher_type. The type of token dispatcher to use. The default is
-            'allgather'. Options are 'allgather', 'alltoall'. We recommend using 'alltoall' when applying
-            expert parallelism. For more information, please refer to the documentation in core/moe/README.
+            Argument moe_token_dispatcher_type. The type of token dispatcher to use. The default is 'allgather'.
+            Options are 'allgather', 'alltoall'. We recommend using 'alltoall' when applying expert parallelism. For
+            more information, please refer to the documentation in core/moe/README.
         moe_enable_deepep (`bool`, *optional*, defaults to `False`):
-            Argument moe_enable_deepep. [Experimental] Enable DeepSeek/DeepEP for efficient token dispatching
-            and combine in MoE models. Only works with flex token dispatcher by
-            setting --moe-token-dispatcher-type=flex.
+            Argument moe_enable_deepep. [Experimental] Enable DeepSeek/DeepEP for efficient token dispatching and
+            combine in MoE models. Only works with flex token dispatcher by setting --moe-token-dispatcher-type=flex.
         moe_deepep_num_sms (`int`, *optional*, defaults to 20):
             Argument moe_deepep_num_sms. Number of SMs to use for DeepEP.
         moe_permute_fusion (`bool`, *optional*, defaults to `False`):
             Argument moe_permute_fusion. Fuse token rearrangement ops during token dispatching.
         moe_expert_capacity_factor (`float`):
-            Argument moe_expert_capacity_factor. The capacity factor for each expert, None means no token will
-            be dropped.
+            Argument moe_expert_capacity_factor. The capacity factor for each expert, None means no token will be
+            dropped.
         moe_pad_expert_input_to_capacity (`bool`, *optional*, defaults to `False`):
-            Argument moe_pad_expert_input_to_capacity. Pads the input for each expert to match the expert
-            capacity length, effective only after the --moe-expert-capacity-factor is set.
+            Argument moe_pad_expert_input_to_capacity. Pads the input for each expert to match the expert capacity
+            length, effective only after the --moe-expert-capacity-factor is set.
         moe_token_drop_policy (`str`, *optional*, defaults to "probs"):
-            Argument moe_token_drop_policy. The policy to drop tokens. Can be either "probs" or "position". If
-            "probs", the tokens with the lowest probabilities will be dropped. If "position", tokens at the end of
-            each batch will be dropped.
+            Argument moe_token_drop_policy. The policy to drop tokens. Can be either "probs" or "position". If "probs",
+            the tokens with the lowest probabilities will be dropped. If "position", tokens at the end of each batch
+            will be dropped.
         moe_apply_probs_on_input (`bool`, *optional*, defaults to `False`):
             Argument moe_apply_probs_on_input. Apply probs before mlp activation for moe routing.
         delay_wgrad_compute (`bool`, *optional*, defaults to `False`):
             Argument delay_wgrad_compute. Delay the wgrad compute for batch-level overlapping
         moe_upcycling_granularity (`int`, *optional*, defaults to 1):
-            Argument moe_upcycling_granularity. This param sepecifics how many times smaller is the expert hidden
-            size compared with the original dense FFN hidden size. For using granular upcycling strategy, please
-            set this param as a positive integer. If this param is set to 1, it means using the default
-            upcycling strategy.
+            Argument moe_upcycling_granularity. This param sepecifics how many times smaller is the expert hidden size
+            compared with the original dense FFN hidden size. For using granular upcycling strategy, please set this
+            param as a positive integer. If this param is set to 1, it means using the default upcycling strategy.
         q_lora_rank (`int`):
             Argument q_lora_rank. Rank of Query tensor's low rank representation.
         kv_lora_rank (`int`, *optional*, defaults to 32):
             Argument kv_lora_rank. Rank of Key and Value tensors' low rank representation.
         qk_head_dim (`int`, *optional*, defaults to 128):
-            Argument qk_head_dim. Dimension of the head in the QK projection. q_head_dim = qk_head_dim
-            + qk_pos_emb_head_dim
+            Argument qk_head_dim. Dimension of the head in the QK projection. q_head_dim = qk_head_dim +
+            qk_pos_emb_head_dim
         qk_pos_emb_head_dim (`int`, *optional*, defaults to 64):
             Argument qk_pos_emb_head_dim. Dimension of the position embedding in the QK projection.
         v_head_dim (`int`, *optional*, defaults to 128):
@@ -996,15 +984,14 @@ class MegatronConfig(PretrainedConfig):
         mscale_all_dim (`float`, *optional*, defaults to 1.0):
             Argument mscale_all_dim. Mscale all dimensions for YaRN RoPE in multi-latent attention.
         heterogeneous_layers_config_path (`str`):
-            Argument heterogeneous_layers_config_path. Path to json file containing heterogeneous model
-            configuration. Use the format of the HuggingFace config files in llama nemotron models,
-            e.g. https://huggingface.co/nvidia/Llama-3_3-Nemotron-Super-49B-v1/resolve/main/config.json.
+            Argument heterogeneous_layers_config_path. Path to json file containing heterogeneous model configuration.
+            Use the format of the HuggingFace config files in llama nemotron models, e.g.
+            https://huggingface.co/nvidia/Llama-3_3-Nemotron-Super-49B-v1/resolve/main/config.json.
         heterogeneous_layers_config_encoded_json (`str`):
-            Argument heterogeneous_layers_config_encoded_json. This is encoded json string of the heterogeneous
-            model configuration. Used to keep the content of the heterogeneous model specification in args when
-            the model is loaded from a checkpoint. Use the format of the HuggingFace config files in llama
-            nemotron models,
-            e.g. https://huggingface.co/nvidia/Llama-3_3-Nemotron-Super-49B-v1/resolve/main/config.json.
+            Argument heterogeneous_layers_config_encoded_json. This is encoded json string of the heterogeneous model
+            configuration. Used to keep the content of the heterogeneous model specification in args when the model is
+            loaded from a checkpoint. Use the format of the HuggingFace config files in llama nemotron models, e.g.
+            https://huggingface.co/nvidia/Llama-3_3-Nemotron-Super-49B-v1/resolve/main/config.json.
         log_params_norm (`bool`, *optional*, defaults to `False`):
             Argument log_params_norm. If set, calculate and log parameters norm.
         log_num_zeros_in_grad (`bool`, *optional*, defaults to `False`):
@@ -1012,28 +999,28 @@ class MegatronConfig(PretrainedConfig):
         log_throughput (`bool`, *optional*, defaults to `False`):
             Argument log_throughput. If set, calculate and log throughput per GPU.
         log_progress (`bool`, *optional*, defaults to `False`):
-            Argument log_progress. If set, log progress (in terms of number of processed tokens and number
-            of floating-point operations) to progress.txt file in checkpoint directory.
+            Argument log_progress. If set, log progress (in terms of number of processed tokens and number of
+            floating-point operations) to progress.txt file in checkpoint directory.
         timing_log_level (`int`, *optional*, defaults to 0):
-            Argument timing_log_level. Granularity level to measure and report timing.    0: report only iteration
-            time and make sure timing       does not introduce extra overhead.   1: report timing for operations
-            that are executed       very limited times (basically once) during       each iteration (such as
-            gradient all-reduce)    2: report timing for operations that migh be       executed numerous times
-            during each iteration. Note that setting the level to 1 or 2 might cause increase in iteration time.
+            Argument timing_log_level. Granularity level to measure and report timing.    0: report only iteration time
+            and make sure timing       does not introduce extra overhead.   1: report timing for operations that are
+            executed       very limited times (basically once) during       each iteration (such as gradient
+            all-reduce)    2: report timing for operations that migh be       executed numerous times during each
+            iteration. Note that setting the level to 1 or 2 might cause increase in iteration time.
         log_energy (`bool`, *optional*, defaults to `False`):
             Argument log_energy. If set, log energy consumption (in Joules)
         barrier_with_L1_time (`bool`, *optional*, defaults to `True`):
-            Argument barrier_with_L1_time. If not set, use barrier with level 1 time measurements. Note that this is
-            up to the user to make sure calling barrier with their timers will not result in hangs. This can happen
-            if for example the user adds a level 1 timer that is not called by all ranks.
+            Argument barrier_with_L1_time. If not set, use barrier with level 1 time measurements. Note that this is up
+            to the user to make sure calling barrier with their timers will not result in hangs. This can happen if for
+            example the user adds a level 1 timer that is not called by all ranks.
         timing_log_option (`str`, *optional*, defaults to "minmax"):
             Argument timing_log_option. Options for logging timing:  max: report the max timing across all ranks
-             minmax: report min and max timings across all ranks  all: report timings of all ranks.
+            minmax: report min and max timings across all ranks  all: report timings of all ranks.
         tensorboard_log_interval (`int`, *optional*, defaults to 1):
             Argument tensorboard_log_interval. Report to tensorboard interval.
         tensorboard_queue_size (`int`, *optional*, defaults to 1000):
-            Argument tensorboard_queue_size. Size of the tensorboard queue for pending events and summaries before
-            one of the ‘add’ calls forces a flush to disk.
+            Argument tensorboard_queue_size. Size of the tensorboard queue for pending events and summaries before one
+            of the ‘add’ calls forces a flush to disk.
         log_timers_to_tensorboard (`bool`, *optional*, defaults to `False`):
             Argument log_timers_to_tensorboard. If set, write timers to tensorboard.
         log_loss_scale_to_tensorboard (`bool`, *optional*, defaults to `True`):
@@ -1063,15 +1050,15 @@ class MegatronConfig(PretrainedConfig):
         run_workload_inspector_server (`bool`, *optional*, defaults to `False`):
             Argument run_workload_inspector_server. If set, enables workload inspector server for on-demand profiling.
         inference_batch_times_seqlen_threshold (`int`, *optional*, defaults to -1):
-            Argument inference_batch_times_seqlen_threshold. If (batch-size * sequence-length) is smaller than
-            this thresholdthen batches will not be split up for pipelining.Requires
-            setting --pipeline-model-parallel-size > 1.Setting this to -1 indicates that batch pipelining is not used.
+            Argument inference_batch_times_seqlen_threshold. If (batch-size * sequence-length) is smaller than this
+            thresholdthen batches will not be split up for pipelining.Requires setting --pipeline-model-parallel-size >
+            1.Setting this to -1 indicates that batch pipelining is not used.
         max_tokens_to_oom (`int`, *optional*, defaults to 12000):
-            Argument max_tokens_to_oom. Maximum number of tokens during inferencetokens here is # in prompt + #
-            to generateAllows us to throw an error before OOM crashes server
+            Argument max_tokens_to_oom. Maximum number of tokens during inferencetokens here is # in prompt + # to
+            generateAllows us to throw an error before OOM crashes server
         output_bert_embeddings (`bool`, *optional*, defaults to `False`):
-            Argument output_bert_embeddings. Output Bert embeddings (via mean pooling) from model, rather than
-            its binary head output or entire hidden batch.
+            Argument output_bert_embeddings. Output Bert embeddings (via mean pooling) from model, rather than its
+            binary head output or entire hidden batch.
         bert_embedder_type (`str`, *optional*, defaults to "megatron"):
             Argument bert_embedder_type. Select either Megatron or Huggingface as the Bert embedder.
         flash_decode (`bool`, *optional*, defaults to `False`):
@@ -1081,12 +1068,12 @@ class MegatronConfig(PretrainedConfig):
         cuda_graph_warmup_steps (`int`, *optional*, defaults to 3):
             Argument cuda_graph_warmup_steps. Number of CUDA graph warmup steps
         external_cuda_graph (`bool`, *optional*, defaults to `False`):
-            Argument external_cuda_graph. Use CUDA graph capture and replay. The CUDA graphs aremanually captured
-            in the training script.
+            Argument external_cuda_graph. Use CUDA graph capture and replay. The CUDA graphs aremanually captured in
+            the training script.
         cuda_graph_scope (`str`, *optional*, defaults to "full"):
-            Argument cuda_graph_scope. Determines the CUDA graphs capturing scope. Valid values are "full" and
-            "attn". "Full" scope captures a whole Transformer layer. "Attn" scope only captures operations
-            in TransformerLayer._forward_attention().
+            Argument cuda_graph_scope. Determines the CUDA graphs capturing scope. Valid values are "full" and "attn".
+            "Full" scope captures a whole Transformer layer. "Attn" scope only captures operations in
+            TransformerLayer._forward_attention().
         inference_max_batch_size (`int`, *optional*, defaults to 8):
             Argument inference_max_batch_size. Maximum number of requests for inference.
         inference_max_seq_length (`int`, *optional*, defaults to 2560):
@@ -1094,34 +1081,34 @@ class MegatronConfig(PretrainedConfig):
         inference_dynamic_batching (`bool`, *optional*, defaults to `False`):
             Argument inference_dynamic_batching. Enable dynamic batching mode.
         inference_dynamic_batching_buffer_size_gb (`float`, *optional*, defaults to 40.0):
-            Argument inference_dynamic_batching_buffer_size_gb. Total buffer size (GB) allocated for the chunked
-            KV memory.
+            Argument inference_dynamic_batching_buffer_size_gb. Total buffer size (GB) allocated for the chunked KV
+            memory.
         inference_dynamic_batching_chunk_size (`int`, *optional*, defaults to 256):
             Argument inference_dynamic_batching_chunk_size. KV cache chunk size. It should be a multiple of 256
         inference_dynamic_batching_buffer_guaranteed_fraction (`float`, *optional*, defaults to 0.2):
-            Argument inference_dynamic_batching_buffer_guaranteed_fraction. Space is reserved within the
-            inference context memory buffer to guarantee that a minimum number of active requests will always be
-            able to run to completion. This is to avoid the context being blocked by paused requests.
+            Argument inference_dynamic_batching_buffer_guaranteed_fraction. Space is reserved within the inference
+            context memory buffer to guarantee that a minimum number of active requests will always be able to run to
+            completion. This is to avoid the context being blocked by paused requests.
         inference_dynamic_batching_buffer_overflow_factor (`float`):
-            Argument inference_dynamic_batching_buffer_overflow_factor. Scaling factor over the memory buffer size
-            for auto computing `max_requests` and `max_tokens`. This scaling factor is used for fitting more
-            requests and tokens in the memory buffer than it can safely hold, which in turn increases throughput.
+            Argument inference_dynamic_batching_buffer_overflow_factor. Scaling factor over the memory buffer size for
+            auto computing `max_requests` and `max_tokens`. This scaling factor is used for fitting more requests and
+            tokens in the memory buffer than it can safely hold, which in turn increases throughput.
         inference_dynamic_batching_max_requests_override (`int`):
-            Argument inference_dynamic_batching_max_requests_override. If set, this overrides the max requests
-            as computed from `--inference-dynamic-batching-buffer-overflow-factor`.
-        inference_dynamic_batching_max_tokens_override (`int`):
-            Argument inference_dynamic_batching_max_tokens_override. If set, this overrides the max tokens as
+            Argument inference_dynamic_batching_max_requests_override. If set, this overrides the max requests as
             computed from `--inference-dynamic-batching-buffer-overflow-factor`.
+        inference_dynamic_batching_max_tokens_override (`int`):
+            Argument inference_dynamic_batching_max_tokens_override. If set, this overrides the max tokens as computed
+            from `--inference-dynamic-batching-buffer-overflow-factor`.
         symmetric_ar_type (`str`):
-            Argument symmetric_ar_type. What type of symmetric all reduce to use. The default is none which is no
-            use of symetric memory
+            Argument symmetric_ar_type. What type of symmetric all reduce to use. The default is none which is no use
+            of symetric memory
         nccl_all_reduce_for_prefill (`bool`, *optional*, defaults to `False`):
-            Argument nccl_all_reduce_for_prefill. When using symmeric all reduce kernels this will use regular
-            nccl kernels for prefill. This can be more effecient when prefill is large as the nccl kernels can be
-            more bandwith optimized
+            Argument nccl_all_reduce_for_prefill. When using symmeric all reduce kernels this will use regular nccl
+            kernels for prefill. This can be more effecient when prefill is large as the nccl kernels can be more
+            bandwith optimized
         mlp_chunks_for_prefill (`int`, *optional*, defaults to 1):
-            Argument mlp_chunks_for_prefill. Number of chunks along sequence dimension for MLP computation
-            during prefill
+            Argument mlp_chunks_for_prefill. Number of chunks along sequence dimension for MLP computation during
+            prefill
         fp8 (`str`):
             Argument fp8. Which fp8 format scheme to use for FP8 tensors in the forward and backward pass
         fp8_recipe (`str`, *optional*, defaults to "delayed"):
@@ -1139,25 +1126,25 @@ class MegatronConfig(PretrainedConfig):
         transformer_impl (`str`, *optional*, defaults to "transformer_engine"):
             Argument transformer_impl. Which Transformer implementation to use.
         fp8_param_gather (`bool`, *optional*, defaults to `False`):
-            Argument fp8_param_gather. Keep the compute param in fp8 (do not use any other intermediate dtype)
-            and perform the param all-gather in fp8.
+            Argument fp8_param_gather. Keep the compute param in fp8 (do not use any other intermediate dtype) and
+            perform the param all-gather in fp8.
         first_last_layers_bf16 (`bool`, *optional*, defaults to `False`):
             Argument first_last_layers_bf16. Construct first and last layers in bf16 when doing FP8 training.
         num_layers_at_start_in_bf16 (`int`, *optional*, defaults to 1):
-            Argument num_layers_at_start_in_bf16. Number of layers at start to construct in bf16
-            when --first-last-layers-bf16 is enabled.
+            Argument num_layers_at_start_in_bf16. Number of layers at start to construct in bf16 when
+            --first-last-layers-bf16 is enabled.
         num_layers_at_end_in_bf16 (`int`, *optional*, defaults to 1):
-            Argument num_layers_at_end_in_bf16. Number of layers at end to construct in bf16
-            when --first-last-layers-bf16 is enabled.
+            Argument num_layers_at_end_in_bf16. Number of layers at end to construct in bf16 when
+            --first-last-layers-bf16 is enabled.
         te_rng_tracker (`bool`, *optional*, defaults to `False`):
-            Argument te_rng_tracker. Use the Transformer Engine version of the random number generator. Required
-            for CUDA graphs support.
+            Argument te_rng_tracker. Use the Transformer Engine version of the random number generator. Required for
+            CUDA graphs support.
         inference_rng_tracker (`bool`, *optional*, defaults to `False`):
             Argument inference_rng_tracker. Use a random number generator configured for inference.
         retro_project_dir (`str`):
-            Argument retro_project_dir. Retro project directory, which contains the preprocessed data for
-            pretraining. This directory is built during preprocessing (see tools/retro/README.md), and
-            contains subdirectories for the chunk database and pretraining neighbors.
+            Argument retro_project_dir. Retro project directory, which contains the preprocessed data for pretraining.
+            This directory is built during preprocessing (see tools/retro/README.md), and contains subdirectories for
+            the chunk database and pretraining neighbors.
         retro_add_retriever (`bool`, *optional*, defaults to `False`):
             Argument retro_add_retriever. Add a retriever to the transformer, for use in pretraining a Retro model.
         retro_cyclic_train_iters (`int`):
@@ -1179,19 +1166,18 @@ class MegatronConfig(PretrainedConfig):
         enable_experimental (`bool`, *optional*, defaults to `False`):
             Argument enable_experimental. Enable experimental features.
         spec (`list[str]`):
-            Argument spec. Specify the <module_location function_name> pair that returns a spec to customize a
-            model, transformer block, or transformer layer, depending on the use case.To use local spec specify
-            local as the argument.For more details, see the model class, `transformer_block.py`,
-            or `transformer_layer.py`
+            Argument spec. Specify the <module_location function_name> pair that returns a spec to customize a model,
+            transformer block, or transformer layer, depending on the use case.To use local spec specify local as the
+            argument.For more details, see the model class, `transformer_block.py`, or `transformer_layer.py`
         hybrid_attention_ratio (`float`, *optional*, defaults to 0.0):
             Argument hybrid_attention_ratio. Ratio of attention layers to total layers, in the range [0.0, 1.0].
         hybrid_mlp_ratio (`float`, *optional*, defaults to 0.0):
             Argument hybrid_mlp_ratio. Ratio of mlp layers to total layers, in the range [0.0, 1.0].
         hybrid_override_pattern (`str`):
-            Argument hybrid_override_pattern. Force a specific hybrid layer pattern. The valueshould be a string
-            of characters chosen fromcore.ssm.mamba_hybrid_layer_allocation.Symbols.If a value greater than 0.0
-            is supplied to any of the hybrid ratio arguments, then the number of each typeof layer in the
-            override pattern must match number inthe overidden pattern
+            Argument hybrid_override_pattern. Force a specific hybrid layer pattern. The valueshould be a string of
+            characters chosen fromcore.ssm.mamba_hybrid_layer_allocation.Symbols.If a value greater than 0.0 is
+            supplied to any of the hybrid ratio arguments, then the number of each typeof layer in the override pattern
+            must match number inthe overidden pattern
         mamba_state_dim (`int`, *optional*, defaults to 128):
             Argument mamba_state_dim. State dimension for Mamba layers.
         mamba_head_dim (`int`, *optional*, defaults to 64):
@@ -1199,8 +1185,8 @@ class MegatronConfig(PretrainedConfig):
         mamba_num_groups (`int`, *optional*, defaults to 8):
             Argument mamba_num_groups. Number of groups for Mamba layers.
         mamba_num_heads (`int`):
-            Argument mamba_num_heads. Number of heads for Mamba layers.If not set, then the number of heads will
-            be --hidden-size * expand // --mamba-head-dim
+            Argument mamba_num_heads. Number of heads for Mamba layers.If not set, then the number of heads will be
+            --hidden-size * expand // --mamba-head-dim
         is_hybrid_model (`bool`, *optional*, defaults to `False`):
             Argument is_hybrid_model. Indicates whether the model is a hybrid model.
         disable_mamba_mem_eff_path (`bool`, *optional*, defaults to `False`):
@@ -1208,24 +1194,24 @@ class MegatronConfig(PretrainedConfig):
         yaml_cfg (`str`):
             Argument yaml_cfg. Config file to add additional arguments
         use_precision_aware_optimizer (`bool`, *optional*, defaults to `False`):
-            Argument use_precision_aware_optimizer. Use the precision-aware optimizer in TransformerEngine,
-            which allows setting the main params and optimizer states to lower precision, such as fp16, bf16 and fp8.
+            Argument use_precision_aware_optimizer. Use the precision-aware optimizer in TransformerEngine, which
+            allows setting the main params and optimizer states to lower precision, such as fp16, bf16 and fp8.
         main_grads_dtype (`str`, *optional*, defaults to "fp32"):
             Argument main_grads_dtype. Dtype of main grads when enabling precision-aware-optimizer
         main_params_dtype (`str`, *optional*, defaults to "fp32"):
             Argument main_params_dtype. Dtype of main params when enabling precision-aware-optimizer
         exp_avg_dtype (`str`, *optional*, defaults to "fp32"):
-            Argument exp_avg_dtype. Dtype of exp_avg (1st moment in adam optimizer) when
-            enabling precision-aware-optimizer. This dtype is used for storing the optimizer state in memory
-            during training but does not affect the precision in the kernel computation.
+            Argument exp_avg_dtype. Dtype of exp_avg (1st moment in adam optimizer) when enabling
+            precision-aware-optimizer. This dtype is used for storing the optimizer state in memory during training but
+            does not affect the precision in the kernel computation.
         exp_avg_sq_dtype (`str`, *optional*, defaults to "fp32"):
-            Argument exp_avg_sq_dtype. Dtype of exp_avg_sq (2nd moment in adam optimizer) when
-            enabling precision-aware-optimizer. This dtype is used for storing the optimizer state in memory
-            during training but does not affect the precision in the kernel computation.
+            Argument exp_avg_sq_dtype. Dtype of exp_avg_sq (2nd moment in adam optimizer) when enabling
+            precision-aware-optimizer. This dtype is used for storing the optimizer state in memory during training but
+            does not affect the precision in the kernel computation.
         enable_one_logger (`bool`, *optional*, defaults to `True`):
-            Argument enable_one_logger. If set, disable using one_logger to track E2E metricsNote that one_logger is
-            an internal tool and not available externally. For installation, please go
-            to https://confluence.nvidia.com/display/MLWFO/Package+Repositoriesfor more details
+            Argument enable_one_logger. If set, disable using one_logger to track E2E metricsNote that one_logger is an
+            internal tool and not available externally. For installation, please go to
+            https://confluence.nvidia.com/display/MLWFO/Package+Repositoriesfor more details
         one_logger_project (`str`, *optional*, defaults to "megatron-lm"):
             Argument one_logger_project. The one-logger project name. Will ignore if --no-one-logger is set
         one_logger_run_name (`str`):
@@ -1233,11 +1219,11 @@ class MegatronConfig(PretrainedConfig):
         one_logger_async (`bool`, *optional*, defaults to `False`):
             Argument one_logger_async. If set, forces one_logger to use async mode.
         app_tag_run_name (`str`):
-            Argument app_tag_run_name. Jobs belonging to same training run, suppose to have the same name. It will
-            be used to track progress of a training done over multiple different jobs
+            Argument app_tag_run_name. Jobs belonging to same training run, suppose to have the same name. It will be
+            used to track progress of a training done over multiple different jobs
         app_tag_run_version (`str`, *optional*, defaults to "0.0.0"):
-            Argument app_tag_run_version. The version of the training of which current job is part of. It will be
-            used to track the changes in the application side which might change the performance baseline
+            Argument app_tag_run_version. The version of the training of which current job is part of. It will be used
+            to track the changes in the application side which might change the performance baseline
         inprocess_restart (`bool`, *optional*, defaults to `False`):
             Argument inprocess_restart. Enables in-process restart.
         inprocess_max_iterations (`int`):
@@ -1247,8 +1233,8 @@ class MegatronConfig(PretrainedConfig):
         inprocess_monitor_process_interval (`float`, *optional*, defaults to 1.0):
             Argument inprocess_monitor_process_interval. Monitoring interval (in seconds) for the monitoring process.
         inprocess_progress_watchdog_interval (`float`, *optional*, defaults to 1.0):
-            Argument inprocess_progress_watchdog_interval. Interval (in seconds) for automatic progress
-            watchdog timestamp updates.
+            Argument inprocess_progress_watchdog_interval. Interval (in seconds) for automatic progress watchdog
+            timestamp updates.
         inprocess_heartbeat_interval (`float`, *optional*, defaults to 30):
             Argument inprocess_heartbeat_interval. Monitoring interval (in seconds) for detecting unresponsive ranks.
         inprocess_soft_timeout (`float`, *optional*, defaults to 60):
@@ -1262,39 +1248,39 @@ class MegatronConfig(PretrainedConfig):
         inprocess_completion_timeout (`float`, *optional*, defaults to 120):
             Argument inprocess_completion_timeout. Timeout (in seconds) for barrier on completion on all ranks
         inprocess_last_call_wait (`float`, *optional*, defaults to 1):
-            Argument inprocess_last_call_wait. Time interval (in seconds) for other ranks to report concurrent
-            terminal failures.
+            Argument inprocess_last_call_wait. Time interval (in seconds) for other ranks to report concurrent terminal
+            failures.
         inprocess_termination_grace_time (`float`, *optional*, defaults to 1):
-            Argument inprocess_termination_grace_time. Interval (in seconds) between SIGTERM and SIGKILL issued on
-            hard timeout
+            Argument inprocess_termination_grace_time. Interval (in seconds) between SIGTERM and SIGKILL issued on hard
+            timeout
         inprocess_granularity (`str`, *optional*, defaults to "node"):
             Argument inprocess_granularity. Granularity for in-process restart.
         inprocess_active_world_size (`int`, *optional*, defaults to 1):
-            Argument inprocess_active_world_size. The number of ranks initially executing the workload. The
-            remaining ranks from the allocation are set aside as warm reserve.
+            Argument inprocess_active_world_size. The number of ranks initially executing the workload. The remaining
+            ranks from the allocation are set aside as warm reserve.
         inprocess_empty_cuda_cache (`bool`, *optional*, defaults to `False`):
             Argument inprocess_empty_cuda_cache. Release all unoccupied cached GPU memory on every in-process restart.
         enable_ft_package (`bool`, *optional*, defaults to `False`):
-            Argument enable_ft_package. If set, Fault Tolerance package is enabled. Note: This feature is for
-            Nvidia internal use only.
+            Argument enable_ft_package. If set, Fault Tolerance package is enabled. Note: This feature is for Nvidia
+            internal use only.
         calc_ft_timeouts (`bool`, *optional*, defaults to `False`):
-            Argument calc_ft_timeouts. If set, FT package will try to automatically compute the timeouts. Note:
-            This feature is for Nvidia internal use only.
+            Argument calc_ft_timeouts. If set, FT package will try to automatically compute the timeouts. Note: This
+            feature is for Nvidia internal use only.
         config_logger_dir (`str`, *optional*, defaults to ""):
             Argument config_logger_dir. If set, will dump all configs to --config-logger-dir
         error_injection_rate (`int`, *optional*, defaults to 0):
-            Argument error_injection_rate. Rate at which to inject unexpected results, e.g. 1000 means once every
-            1000 result validations
+            Argument error_injection_rate. Rate at which to inject unexpected results, e.g. 1000 means once every 1000
+            result validations
         error_injection_type (`str`, *optional*, defaults to "transient_error"):
             Argument error_injection_type. Type of error to inject.
         rerun_mode (`str`, *optional*, defaults to "disabled"):
-            Argument rerun_mode. Use re-run engine to validate results (default) or to emit stats on variability
-            of computations due to non-deterministic algorithms.
+            Argument rerun_mode. Use re-run engine to validate results (default) or to emit stats on variability of
+            computations due to non-deterministic algorithms.
         enable_msc (`bool`, *optional*, defaults to `True`):
             Argument enable_msc. Disable the usage of Multi-Storage Client (MSC) in Megatron Core.
         kitchen_config_file (`str`):
-            Argument kitchen_config_file. Use the config .yaml file at the specified location to configure
-            kitchen quantization.
+            Argument kitchen_config_file. Use the config .yaml file at the specified location to configure kitchen
+            quantization.
         kitchen_recipe_number (`int`):
             Argument kitchen_recipe_number. Use a default kitchen recipe for all layers as defined by QAT_PARAMS index
         sft (`bool`, *optional*, defaults to `False`):

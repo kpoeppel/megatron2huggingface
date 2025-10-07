@@ -91,12 +91,16 @@ def split_line(offset, line, max_line=120):
     while len(offset + line) > max_line:
         line_sub = line.split(" ")
         cum_length = len(offset + line_sub[0])
-        idx = 0
-        while cum_length < max_line or idx - 1 > len(line_sub):
-            cum_length += 1 + len(line_sub[idx + 1])
+        idx = 1
+        while cum_length < max_line and idx < len(line_sub):
+            cum_length += 1 + len(line_sub[idx])
             idx += 1
-        lines += [offset + " ".join(line_sub[: idx - 1])]
-        line = " ".join(line_sub[idx - 1 :])
+        if idx == 1:
+            lines += [offset + line_sub[0]]
+            line = " ".join(line_sub[1:])
+        else:
+            lines += [offset + " ".join(line_sub[: idx - 1])]
+            line = " ".join(line_sub[idx - 1 :])
     return lines + [offset + line]
 
 
