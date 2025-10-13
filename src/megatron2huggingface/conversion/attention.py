@@ -23,7 +23,10 @@ from megatron2huggingface.conversion.base import (
 from megatron2huggingface.conversion.config import megatron2transformer_config
 from megatron2huggingface.modeling.attention import SelfAttention
 from megatron2huggingface.configuration_megatron import MegatronConfig
-from megatron2huggingface.conversion.layer_norm import LinearLayerNormConverter
+from megatron2huggingface.conversion.layer_norm import (
+    LinearLayerNormConverter,
+    LayerNormConverter,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -36,6 +39,7 @@ class AttentionConverter(BaseConverter):
     def __init__(self, megatron_config: dict[str, Any]):
         super().__init__(megatron_config)
         self.linear_layer_norm_converter = LinearLayerNormConverter(megatron_config)
+        self.layer_norm_converter = LayerNormConverter(megatron_config)
 
     def convert_weights(
         self, megatron_state: dict[str, torch.Tensor], **kwargs
@@ -61,10 +65,34 @@ class AttentionConverter(BaseConverter):
         # Convert QKV projection (keep fused)
         self._convert_qkv_projection(megatron_state, hf_state)
 
+        if self.megatron_config["qk_layernorm"]:
+            self._convert_qk_layernorm(megatron_state, hf_state)
+
         # Convert output projection
         self._convert_output_projection(megatron_state, hf_state)
 
         return hf_state
+
+    def _convert_qk_layernorm(
+        self,
+        megatron_state: dict[str, torch.Tensor],
+        hf_state: dict[str, torch.Tensor],
+    ):
+        q_ln_submodule_weights = extract_submodule_state_dict(
+            megatron_state, "q_layernorm"
+        )
+        q_ln_converted = self.layer_norm_converter.convert_weights(
+            q_ln_submodule_weights
+        )
+        hf_state.update(add_prefix_to_state_dict(q_ln_converted, "q_layernorm"))
+
+        k_ln_submodule_weights = extract_submodule_state_dict(
+            megatron_state, "k_layernorm"
+        )
+        k_ln_converted = self.layer_norm_converter.convert_weights(
+            k_ln_submodule_weights
+        )
+        hf_state.update(add_prefix_to_state_dict(k_ln_converted, "k_layernorm"))
 
     def _convert_qkv_projection(
         self,

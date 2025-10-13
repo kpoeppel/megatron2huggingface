@@ -195,10 +195,12 @@ class SelfAttention(nn.Module):
             self.q_layernorm = nn.LayerNorm(
                 self.hidden_size_per_attention_head,
                 eps=getattr(config, "layernorm_epsilon", 1e-5),
+                bias=config.add_qkv_bias,
             )
             self.k_layernorm = nn.LayerNorm(
                 self.hidden_size_per_attention_head,
                 eps=getattr(config, "layernorm_epsilon", 1e-5),
+                bias=config.add_qkv_bias,
             )
         else:
             self.q_layernorm = None

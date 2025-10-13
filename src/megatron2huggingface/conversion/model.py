@@ -19,6 +19,7 @@ from .mlp import MLPConverter
 from .moemlp import MoeMLPConverter
 from .layer_norm import LayerNormConverter
 from .config import megatron2transformer_config
+from types import SimpleNamespace
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +238,43 @@ class ModelConverter(BaseConverter):
         from megatron.core.models.gpt import GPTModel
         from megatron.core.models.gpt.gpt_layer_specs import (
             get_gpt_decoder_block_spec,
+            get_gpt_layer_local_spec,
+            get_gpt_layer_with_transformer_engine_spec,
         )
+
+        args = SimpleNamespace(**self.megatron_config)
+
+        def _get_transformer_layer_spec(use_te, config):
+            """Get transformer layer specification based on configuration.
+
+            Args:
+                use_te (bool): Whether to use Transformer Engine
+                args: Training arguments
+                config: Model configuration
+
+            Returns:
+                transformer_layer_spec: The transformer layer specification
+            """
+            if use_te:
+                return get_gpt_layer_with_transformer_engine_spec(
+                    args.num_experts,
+                    args.moe_grouped_gemm,
+                    args.qk_layernorm,
+                    args.multi_latent_attention,
+                    args.moe_use_legacy_grouped_gemm,
+                    qk_l2_norm=args.qk_l2_norm,
+                    use_kitchen=config.use_kitchen,
+                )
+            else:
+                return get_gpt_layer_local_spec(
+                    args.num_experts,
+                    args.moe_grouped_gemm,
+                    args.qk_layernorm,
+                    args.multi_latent_attention,
+                    args.moe_use_legacy_grouped_gemm,
+                    normalization=args.normalization,
+                    use_kitchen=config.use_kitchen,
+                )
 
         config = self.megatron_config
 
@@ -276,7 +313,9 @@ class ModelConverter(BaseConverter):
                 transformer_config,
                 use_transformer_engine=True,
                 normalization=config["normalization"],
+                qk_l2_norm=config["qk_l2_norm"],
             ),
+            # transformer_layer_spec=_get_transformer_layer_spec(),
             vocab_size=config["vocab_size"],
             max_sequence_length=config.get("max_position_embeddings", 2048),
             pre_process=True,
@@ -286,6 +325,12 @@ class ModelConverter(BaseConverter):
             share_embeddings_and_output_weights=config.get(
                 "tie_word_embeddings", False
             ),
+            rotary_percent=config["rotary_percent"],
+            rotary_base=config["rotary_base"],
+            position_embedding_type=config["position_embedding_type"],
+            rope_scaling=config["use_rope_scaling"],
+            rope_scaling_factor=config["rope_scaling_factor"],
+            seq_len_interpolation_factor=config["rotary_seq_len_interpolation_factor"],
         )
 
         logger.info(
