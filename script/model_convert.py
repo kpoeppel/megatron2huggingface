@@ -149,6 +149,7 @@ def main():
     cfg_dict["use_rotary_position_embeddings"] = (
         True if cfg_dict["position_embedding_type"] == "rope" else False
     )
+    
     cfg_dict["auto_detect_ckpt_format"] = False
     cfg_dict["checkpoint_format"] = (
         "dist"  # or "megatron_dist" depending on your codebase
@@ -171,11 +172,25 @@ def main():
 
     _ = MegatronConfig(**cfg_dict)  # check if configuration actually works.
     megatron_args = SimpleNamespace(world_size=1, rank=0, **cfg_dict)
+    disable_bias_linear = cfg_dict.get("disable_bias_linear")
+    add_bias_linear = cfg_dict.get("add_bias_linear")
+    if add_bias_linear:
+        if disable_bias_linear:
+            cfg_dict['add_bias_linear'] = False
+            cfg_dict['disable_bias_linear'] = True
+        else:
+            cfg_dict['add_bias_linear'] = True
+            cfg_dict['disable_bias_linear'] = False 
+
 
     initialize_megatron(
         allow_no_cuda=True,
         parsed_args=megatron_args,
     )
+    if cfg_dict['tokenizer_type'] == "HuggingFaceTokenizer":
+        from transformers import AutoTokenizer
+        cfg_dict['vocab_size'] = AutoTokenizer.from_pretrained(cfg_dict['tokenizer_model']).vocab_size
+
 
     converter = ModelConverter(cfg_dict)
 
@@ -224,6 +239,15 @@ def main():
     sharded_state_dict = megatron_model.sharded_state_dict(
         prefix=getattr(args, "sd_prefix", "")
     )
+    removed = 0
+    for k in list(sharded_state_dict.keys()):
+        if '._extra_state' in k:
+            sharded_state_dict.pop(k)
+            removed += 1
+    print(f"[conversion] Stripped {removed} '._extra_state' entries (use --keep-extra-state to retain)." )
+
+
+
     strict = strict_map[getattr(args, "strict_mode", "assume_ok")]
 
     # load_checkpoint([megatron_model], None, None)
