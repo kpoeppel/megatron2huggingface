@@ -181,7 +181,7 @@ def main():
         else:
             cfg_dict['add_bias_linear'] = True
             cfg_dict['disable_bias_linear'] = False 
-
+    cfg_dict["tie_word_embeddings"] = not cfg_dict["untie_embeddings_and_output_weights"]
 
     initialize_megatron(
         allow_no_cuda=True,
@@ -193,8 +193,10 @@ def main():
 
 
     converter = ModelConverter(cfg_dict)
+    print(converter)
 
     megatron_model = converter.create_megatron_module()
+    print(megatron_model)
 
     def reshape_hook(state_dict, prefix, local_metadata):
         for key in list(state_dict.keys()):

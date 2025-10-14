@@ -174,8 +174,9 @@ class ModelConverter(BaseConverter):
                 )
                 # Find embedding weight key (search to be robust to converter naming)
                 embedding_weight_key = None
+                print(converted_weights.keys())
                 for k in converted_weights.keys():
-                    if k.endswith("word_embeddings.weight"):
+                    if k.endswith("embed_tokens.weight"):
                         embedding_weight_key = k
                         break
                 if embedding_weight_key is not None:
