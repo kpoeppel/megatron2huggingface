@@ -154,22 +154,45 @@ class ModelConverter(BaseConverter):
 
         converted_weights = add_prefix_to_state_dict(converted_weights, "model")
 
-        output_layer_weight = None
-        output_layer_weight = megatron_state_dict["output_layer.weight"]
-        logger.info("Found output layer at key: output_layer.weight")
-
+        # Handle (possibly tied) LM head
+        # Try to get explicit output layer weight safely
+        output_layer_weight = megatron_state_dict.get("output_layer.weight", None)
         if output_layer_weight is not None:
+            logger.info("Found output layer at key: output_layer.weight")
             logger.info("Converting language modeling head...")
-
-            # Handle tensor parallelism if needed
             if isinstance(output_layer_weight, list):
                 logger.info("Concatenating tensor parallel LM head weights")
                 output_layer_weight = torch.cat(output_layer_weight, dim=0)
-
             converted_weights["lm_head.weight"] = output_layer_weight
             logger.info(f"Converted LM head: {output_layer_weight.shape}")
         else:
             logger.warning("No output layer found in checkpoint")
+            # Fallback: tie with embeddings if requested
+            if self.megatron_config.get("tie_word_embeddings", False):
+                logger.info(
+                    "tie_word_embeddings=True; attempting to tie lm_head.weight to embedding weights."
+                )
+                # Find embedding weight key (search to be robust to converter naming)
+                embedding_weight_key = None
+                for k in converted_weights.keys():
+                    if k.endswith("word_embeddings.weight"):
+                        embedding_weight_key = k
+                        break
+                if embedding_weight_key is not None:
+                    converted_weights["lm_head.weight"] = converted_weights[
+                        embedding_weight_key
+                    ]
+                    logger.info(
+                        f"Tied lm_head.weight to embedding weight tensor: {embedding_weight_key}"
+                    )
+                else:
+                    logger.warning(
+                        "Could not locate embedding weight to tie (expected key ending with 'word_embeddings.weight')."
+                    )
+            else:
+                logger.info(
+                    "tie_word_embeddings is False; leaving lm_head.weight absent."
+                )
 
         logger.info(
             f"Model conversion complete! Converted {len(converted_weights)} weight tensors."
