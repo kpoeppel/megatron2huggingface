@@ -207,6 +207,7 @@ __all__ = ["{class_name}"]
     # todo
     main = (
         '''class {class_name}({base_class_name}):
+    model_type="megatron"
     r"""
     This configures a MegatronModel.
 
