@@ -229,6 +229,7 @@ __all__ = ["{class_name}"]
         + _generate_assigments(args)
         + """
 
+        self.num_hidden_layers: int = num_layers
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,
