@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers.utils import logging
+from transformers.cache_utils import Cache
 
 from ..configuration_megatron import MegatronConfig
 from .layer_norm import LinearLayerNorm
@@ -145,9 +146,11 @@ class SelfAttention(nn.Module):
     def __init__(
         self,
         config: MegatronConfig,
+        layer_idx: int | None = None,
     ):
         super().__init__()
         self.config = config
+        self.layer_idx = layer_idx
 
         self.hidden_size = config.hidden_size
         self.num_attention_heads = config.num_attention_heads
@@ -262,8 +265,11 @@ class SelfAttention(nn.Module):
         attention_bias: torch.Tensor | None = None,
         position_ids: torch.Tensor | None = None,
         past_key_value: tuple[torch.Tensor] | None = None,
+        cache_position: torch.LongTensor | None = None,
+        use_cache: bool | None = False,
+        output_attentions: bool | None = False,
         **kwargs,
-    ) -> tuple[torch.Tensor, torch.Tensor | None]:
+    ) -> tuple[torch.Tensor, torch.Tensor | None, tuple[torch.Tensor] | None]:
         """Forward pass following Megatron's structure.
 
         Args:
@@ -271,10 +277,16 @@ class SelfAttention(nn.Module):
             attention_mask: Optional attention mask
             rotary_pos_emb: Optional rotary position embeddings
             attention_bias: Optional attention bias
+            position_ids: Optional position IDs
+            past_key_value: Optional cached key/value tensors
+            cache_position: Position indices for cache updates
+            use_cache: Whether to return cache for generation
+            output_attentions: Whether to output attention weights
 
         Returns:
             output: [seq_len, batch, hidden_size]
             bias: Optional output bias (None if add_bias_linear=False)
+            present_key_value: Updated cache (if use_cache=True)
         """
         # Get Q, K, V tensors
         query, key, value = self.get_query_key_value_tensors(hidden_states)
@@ -292,6 +304,7 @@ class SelfAttention(nn.Module):
                     query,
                     cos,
                     sin,
+                    position_ids=position_ids,
                     rotary_interleaved=getattr(
                         self.config, "rotary_interleaved", False
                     ),
@@ -302,10 +315,45 @@ class SelfAttention(nn.Module):
                     key,
                     cos,
                     sin,
+                    position_ids=position_ids,
                     rotary_interleaved=getattr(
                         self.config, "rotary_interleaved", False
                     ),
                 )
+
+        # Handle KV cache for generation
+        present_key_value = None
+        if use_cache:
+            # Convert from [seq_len, batch, num_heads, head_dim] to [batch, num_heads, seq_len, head_dim]
+            key_cache = key.permute(1, 2, 0, 3)
+            value_cache = value.permute(1, 2, 0, 3)
+            
+            if past_key_value is not None:
+                # Check if it's a Cache object or legacy tuple
+                if isinstance(past_key_value, Cache):
+                    # Use the Cache API
+                    cache_kwargs = {"cache_position": cache_position}
+                    key_cache, value_cache = past_key_value.update(
+                        key_cache, value_cache, self.layer_idx, cache_kwargs
+                    )
+                else:
+                    # Legacy tuple format: (key, value)
+                    # Check if it's a valid tuple with non-None elements
+                    if (isinstance(past_key_value, (tuple, list)) and 
+                        len(past_key_value) == 2 and
+                        past_key_value[0] is not None and 
+                        past_key_value[1] is not None):
+                        cached_key, cached_value = past_key_value
+                        # Concatenate along sequence dimension
+                        key_cache = torch.cat([cached_key, key_cache], dim=2)
+                        value_cache = torch.cat([cached_value, value_cache], dim=2)
+            
+            # Store for return
+            present_key_value = (key_cache, value_cache)
+            
+            # Convert back to [seq_len, batch, num_heads, head_dim] for attention
+            key = key_cache.permute(2, 0, 1, 3)
+            value = value_cache.permute(2, 0, 1, 3)
 
         # Core attention computation
         context = self.core_attention(
@@ -328,4 +376,4 @@ class SelfAttention(nn.Module):
         if hasattr(self.linear_proj, "bias") and self.linear_proj.bias is not None:
             bias = self.linear_proj.bias
 
-        return output, bias, None
+        return output, bias, present_key_value

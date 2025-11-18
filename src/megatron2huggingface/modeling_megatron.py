@@ -23,7 +23,7 @@ from transformers.modeling_attn_mask_utils import (
     _prepare_4d_causal_attention_mask,
     _prepare_4d_causal_attention_mask_for_sdpa,
 )
-
+from transformers.generation.utils import GenerationMixin
 from .configuration_megatron import MegatronConfig
 from .modeling import SelfAttention, MLP, LayerNorm, RMSNorm, MoeMLP
 
@@ -128,8 +128,9 @@ class MegatronDecoderLayer(nn.Module):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
+        self.layer_idx = layer_idx
 
-        self.self_attn = SelfAttention(config=config)
+        self.self_attn = SelfAttention(config=config, layer_idx=layer_idx)
         if config.num_experts is not None and config.num_experts > 1:
             self.pre_mlp_layernorm = (
                 LayerNorm(self.hidden_size, eps=config.norm_epsilon)
@@ -148,10 +149,9 @@ class MegatronDecoderLayer(nn.Module):
         past_key_value: tuple[torch.Tensor] | None = None,
         output_attentions: bool | None = False,
         use_cache: bool | None = False,
+        cache_position: torch.LongTensor | None = None,
         **kwargs,
     ) -> tuple[torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor] | None]:
-        # TODO: enable past/present key_value cache
-
         if "padding_mask" in kwargs:
             warnings.warn(
                 "Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure use `attention_mask` instead.`"
@@ -169,6 +169,7 @@ class MegatronDecoderLayer(nn.Module):
             past_key_value=past_key_value,
             output_attentions=output_attentions,
             use_cache=use_cache,
+            cache_position=cache_position,
             **kwargs,
         )
         # returns (S, B, H)
@@ -282,6 +283,7 @@ class MegatronModel(MegatronPreTrainedModel):
         output_attentions: bool | None = None,
         output_hidden_states: bool | None = None,
         return_dict: bool | None = None,
+        cache_position: torch.LongTensor | None = None,
     ) -> tuple | BaseModelOutputWithPastAndCrossAttentions:
         output_attentions = (
             output_attentions
@@ -386,11 +388,14 @@ class MegatronModel(MegatronPreTrainedModel):
 
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
-        next_decoder_cache = None
+        next_decoder_cache = () if use_cache else None
 
-        for decoder_layer in self.layers:
+        for layer_idx, decoder_layer in enumerate(self.layers):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
+
+            # Get the cache for this specific layer
+            layer_past_key_value = past_key_values[layer_idx] if past_key_values is not None else None
 
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
@@ -398,24 +403,27 @@ class MegatronModel(MegatronPreTrainedModel):
                     hidden_states,
                     attention_mask,
                     position_ids,
-                    past_key_values,
+                    layer_past_key_value,
                     output_attentions,
                     use_cache,
+                    cache_position,
                 )
             else:
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,
                     position_ids=position_ids,
-                    past_key_value=past_key_values,
+                    past_key_value=layer_past_key_value,
                     output_attentions=output_attentions,
                     use_cache=use_cache,
+                    cache_position=cache_position,
                 )
 
             hidden_states = layer_outputs[0]
 
             if use_cache:
-                next_decoder_cache = layer_outputs[2 if output_attentions else 1]
+                # Accumulate cache from each layer
+                next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
@@ -428,11 +436,10 @@ class MegatronModel(MegatronPreTrainedModel):
 
         next_cache = None
         if use_cache:
-            next_cache = (
-                next_decoder_cache.to_legacy_cache()
-                if (use_legacy_cache and next_decoder_cache)
-                else next_decoder_cache
-            )
+            # next_decoder_cache is already a tuple of (key, value) tuples for each layer
+            # So it's already in legacy format
+            next_cache = next_decoder_cache if next_decoder_cache else None
+            
         if not return_dict:
             return tuple(
                 v
@@ -447,7 +454,7 @@ class MegatronModel(MegatronPreTrainedModel):
         )
 
 
-class MegatronForCausalLM(MegatronPreTrainedModel):
+class MegatronForCausalLM(MegatronPreTrainedModel, GenerationMixin):
     """Megatron Model transformer with a language modeling head on top (linear
     layer with weights tied to the input embeddings)."""
 
@@ -497,6 +504,7 @@ class MegatronForCausalLM(MegatronPreTrainedModel):
         output_attentions: bool | None = None,
         output_hidden_states: bool | None = None,
         return_dict: bool | None = None,
+        cache_position: torch.LongTensor | None = None,
     ) -> tuple | CausalLMOutputWithCrossAttentions:
         output_attentions = (
             output_attentions
@@ -523,6 +531,7 @@ class MegatronForCausalLM(MegatronPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            cache_position=cache_position,
         )
 
         hidden_states = outputs[0]
@@ -553,3 +562,12 @@ class MegatronForCausalLM(MegatronPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+# Backward compatibility alias for auto_map or external imports
+AutoModelForCausalLM = MegatronForCausalLM
+
+__all__ = [
+    "MegatronConfig",
+    "MegatronPreTrainedModel",
+    "MegatronModel",
+    "MegatronForCausalLM",
+]

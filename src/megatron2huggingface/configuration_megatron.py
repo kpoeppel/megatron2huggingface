@@ -5,6 +5,7 @@ from typing import Any
 from transformers.configuration_utils import PretrainedConfig
 
 class MegatronConfig(PretrainedConfig):
+    model_type="megatron"
     r"""
     This configures a MegatronModel.
 
@@ -194,6 +195,8 @@ class MegatronConfig(PretrainedConfig):
             layer."shared_experts": recompute the shared experts in the MoE layer."moe_act", "layernorm", and
             "mla_up_proj" use output-discarding checkpointing, "core_attn", "mlp", "moe", and "shared_experts" use
             normal checkpointing.
+        cpu_offloading_num_layers (`int`, *optional*, defaults to 0):
+            Argument cpu_offloading_num_layers. The number of Transformer layers to offload to CPU.
         clone_scatter_output_in_embedding (`bool`, *optional*, defaults to `True`):
             Argument clone_scatter_output_in_embedding. If not set, clone the output of the scatter in embedding layer
             to GC original tensor.
@@ -272,8 +275,10 @@ class MegatronConfig(PretrainedConfig):
         exit_duration_in_mins (`int`):
             Argument exit_duration_in_mins. Exit the program after this many minutes.
         exit_signal_handler (`bool`, *optional*, defaults to `False`):
-            Argument exit_signal_handler. Dynamically save the checkpoint and shutdown the training if SIGTERM is
+            Argument exit_signal_handler. Dynamically save the checkpoint and shutdown the training if signal is
             received
+        exit_signal (`str`, *optional*, defaults to "SIGTERM"):
+            Argument exit_signal. Signal to use for exit signal handler. If not specified, defaults to SIGTERM.
         tensorboard_dir (`str`):
             Argument tensorboard_dir. Write TensorBoard logs to this directory.
         masked_softmax_fusion (`bool`, *optional*, defaults to `True`):
@@ -314,6 +319,9 @@ class MegatronConfig(PretrainedConfig):
         overlap_cpu_optimizer_d2h_h2d (`bool`, *optional*, defaults to `False`):
             Argument overlap_cpu_optimizer_d2h_h2d. Overlap CPU optimizer step, gradients D2H and updated parameters
             H2D.
+        dump_param_to_param_group_map (`str`):
+            Argument dump_param_to_param_group_map. Path to a file containing parameter-to-parameter-group mapping.
+            Provide a JSON file that specifies which parameters belong to which parameter group for global coordination.
         pin_cpu_grads (`bool`, *optional*, defaults to `True`):
             Argument pin_cpu_grads. Disable pinning of CPU memory for gradients.
         pin_cpu_params (`bool`, *optional*, defaults to `True`):
@@ -387,6 +395,8 @@ class MegatronConfig(PretrainedConfig):
             Argument langrl_inference_server_type. Type of inference server to use.
         langrl_inference_server_conversation_template (`str`):
             Argument langrl_inference_server_conversation_template. Conversation template, if using a chat server.
+        langrl_external_server (`str`, *optional*, defaults to `False`):
+            Argument langrl_external_server.
         langrl_env_config (`str`):
             Argument langrl_env_config. Path to YAML config file for RL environment configuration.
         rl_offload_optimizer_during_inference (`bool`, *optional*, defaults to `False`):
@@ -408,6 +418,14 @@ class MegatronConfig(PretrainedConfig):
             coefficient is set, apply truncation for the IS correction at GRPO loss.
         rl_calculate_intra_group_similarity (`str`, *optional*, defaults to `False`):
             Argument rl_calculate_intra_group_similarity. If set, calculate the intra-group similarity of rollouts.
+        rl_use_sequence_packing (`bool`, *optional*, defaults to `False`):
+            Argument rl_use_sequence_packing. Enable sequence packing
+        rl_sequence_packing_bin_size (`int`, *optional*, defaults to 8192):
+            Argument rl_sequence_packing_bin_size. Override bin size for sequence packing.
+        rl_sequence_packing_algo (`str`, *optional*, defaults to "fifo"):
+            Argument rl_sequence_packing_algo. Algorithm for distributing packed bins across ranks. fifo:
+            first-in-first-out sequential distribution, round-robin: distribute bins cyclically across ranks for better
+            load balancing
         seed (`int`, *optional*, defaults to 1234):
             Argument seed. Random seed used for python, numpy, pytorch, and cuda.
         data_parallel_random_init (`bool`, *optional*, defaults to `False`):
@@ -570,9 +588,6 @@ class MegatronConfig(PretrainedConfig):
             load tries to use as little memory as possible by using Gloo (instead of NCCL) and only one rank for
             saving. Turn on only if experiencing host or device memory issues. Has affect only with
             `--dist-ckpt-optim-fully-reshardable` flag.
-        load_model_opt_format (`bool`, *optional*, defaults to `False`):
-            Argument load_model_opt_format. Load a checkpoint for TensorRT model optimizer (nvidia-modelopt).This
-            function can also be used to load NeMo .nemo sharded checkpoints.
         fp16 (`bool`, *optional*, defaults to `False`):
             Argument fp16. Run model in fp16 mode.
         bf16 (`bool`, *optional*, defaults to `False`):
@@ -639,7 +654,10 @@ class MegatronConfig(PretrainedConfig):
         distributed_backend (`str`, *optional*, defaults to "nccl"):
             Argument distributed_backend. Which backend to use for distributed training.
         distributed_timeout_minutes (`int`, *optional*, defaults to 10):
-            Argument distributed_timeout_minutes. Timeout minutes for torch.distributed.
+            Argument distributed_timeout_minutes. Default timeout minutes for torch.distributed.
+        distributed_timeout_seconds_after_init (`int`):
+            Argument distributed_timeout_seconds_after_init. Timeout seconds for process groups after
+            initialization.This timeout is applied to all process groups after initialization.
         overlap_grad_reduce (`bool`, *optional*, defaults to `False`):
             Argument overlap_grad_reduce. If set, overlap DDP grad reduce.
         defer_embedding_wgrad_compute (`bool`, *optional*, defaults to `False`):
@@ -661,6 +679,10 @@ class MegatronConfig(PretrainedConfig):
             power of 2 (2^16) to ensure NCCL collectives have high bus bandwidth at large DP counts, since NCCL message
             size (which for ring algorithms is bucket_size / dp_size) apparently needs to be divisible by a power of 2
             for high busbw.
+        ddp_reduce_scatter_with_fp32_accumulation (`bool`, *optional*, defaults to `False`):
+            Argument ddp_reduce_scatter_with_fp32_accumulation. If set, use a reduce-scatter implementation which sends
+            lower-precision values over the wire (using an all-to-all to keep total communication overhead in line with
+            the standard ring implementation) but performs accumulation locally in FP32.
         ddp_average_in_collective (`bool`, *optional*, defaults to `False`):
             Argument ddp_average_in_collective. If set, average directly in data-parallel communication collective.
         overlap_param_gather (`bool`, *optional*, defaults to `False`):
@@ -840,6 +862,16 @@ class MegatronConfig(PretrainedConfig):
             Argument object_storage_cache_path. Path to cache index files when using s3 or msc dataloader
         mid_level_dataset_surplus (`float`, *optional*, defaults to 0.005):
             Argument mid_level_dataset_surplus. The sample surplus to build for the mid-level datasets(s)
+        allow_ambiguous_pad_tokens (`bool`, *optional*, defaults to `False`):
+            Argument allow_ambiguous_pad_tokens. Whether to prevent pad tokens already present in the dataset from
+            being masked out when the pad token incorrectly shares the same id with other special tokens in the
+            tokenizer. Note that this argument has no effect when the tokenizer correctly provides a unique id for the
+            pad. Masking out such ambiguous pad tokens results in training instability. Such a scenario is best
+            resolved by fixing the tokenizer; leaving this option as False provides a workaround. When left to the
+            default of False, any token ids that collide with the pad token id - as provided by the tokenizer - will
+            not be masked out of the loss calculation: it cannot be determined whether they are truly pad. If instead
+            this argument is set, the training flow will treat all tokens that share the same id as the pad token as
+            true pad tokens, potentially causing severe training instability.
         vocab_size (`int`):
             Argument vocab_size. Size of vocab before EOD or padding.
         padded_vocab_size (`int`):
@@ -978,10 +1010,14 @@ class MegatronConfig(PretrainedConfig):
         moe_shared_expert_intermediate_size (`int`):
             Argument moe_shared_expert_intermediate_size. Shared expert total ffn hidden size. It should be equal to
             "num_shared_experts * ffn_size_of_each_shared_expert" if there are multiple shared experts. None means no
-            shared expert.
+            shared expert. By default, the shared experts execute before the router. However, when
+            --moe-shared-expert-overlap or --overlap-moe-expert-parallel-comm is set, the shared experts execute after
+            the router, before the routed experts. This makes the gradients from the router and the shared experts
+            added in different orders to the hidden_states, causing minor numerical differences in the hidden_states
+            gradient.
         moe_shared_expert_overlap (`bool`, *optional*, defaults to `False`):
             Argument moe_shared_expert_overlap. Enable overlapping between shared expert computations and dispatcher
-            communications. Without this, the shared epxerts execute after the routed experts. Only effective when
+            communications. Without this, the shared experts execute before the router. Only effective when
             moe-shared-expert-intermediate-size is set.
         moe_grouped_gemm (`bool`, *optional*, defaults to `False`):
             Argument moe_grouped_gemm. When there are multiple experts per rank, launch multiple local GEMM kernels in
@@ -1091,6 +1127,11 @@ class MegatronConfig(PretrainedConfig):
             Argument moe_upcycling_granularity. This param sepecifics how many times smaller is the expert hidden size
             compared with the original dense FFN hidden size. For using granular upcycling strategy, please set this
             param as a positive integer. If this param is set to 1, it means using the default upcycling strategy.
+        moe_pad_experts_for_cuda_graph_inference (`bool`, *optional*, defaults to `False`):
+            Argument moe_pad_experts_for_cuda_graph_inference. some MoE routers have a D2H sync that will break cuda
+            graphs.  If this flag is set the router will switch to dropping and padding during decode time which does
+            not have a D2H sync. The capacity factor is set to the max that an expert could see during inference so no
+            tokens are actually dropped.
         q_lora_rank (`int`):
             Argument q_lora_rank. Rank of Query tensor's low rank representation.
         kv_lora_rank (`int`, *optional*, defaults to 32):
@@ -1196,17 +1237,26 @@ class MegatronConfig(PretrainedConfig):
         flash_decode (`bool`, *optional*, defaults to `False`):
             Argument flash_decode. Whether to use the flash decoding kernel.
         enable_cuda_graph (`bool`, *optional*, defaults to `False`):
-            Argument enable_cuda_graph. Use CUDA graph capture and replay. --cuda-graph-scope="full_iteration" enables
-            whole iteration CUDA graph. 
+            Argument enable_cuda_graph. Deprecated. Use --cuda-graph-impl=local instead. Use local implementation of
+            CUDA graph capture and replay. --cuda-graph-scope="full_iteration" enables whole iteration CUDA graph. 
         cuda_graph_warmup_steps (`int`, *optional*, defaults to 3):
             Argument cuda_graph_warmup_steps. Number of CUDA graph warmup steps
         external_cuda_graph (`bool`, *optional*, defaults to `False`):
-            Argument external_cuda_graph. Use CUDA graph capture and replay. The CUDA graphs aremanually captured in
-            the training script.
+            Argument external_cuda_graph. Deprecated. Use --cuda-graph-impl=transformer_engine instead. Use TE
+            make_graphed_callables() to capture the CUDA graph.
+        cuda_graph_impl (`str`, *optional*, defaults to "none"):
+            Argument cuda_graph_impl. Determines the CUDA graph capture implementation. "none": no CUDA graph. "local":
+            capture the CUDA graph using MCore local implementation. --cuda-graph-scope="full_iteration" enables whole
+            iteration CUDA graph. "transformer_engine": capture the CUDA graph using TE make_graphed_callables().
         cuda_graph_scope (`str`, *optional*, defaults to "full"):
             Argument cuda_graph_scope. Determines the CUDA graphs capturing scope. Valid values are "full", "attn" and
             "full_iteration". "Full" scope captures a whole Transformer layer. "Attn" scope only captures operations in
-            TransformerLayer._forward_attention(). "ful_iteration" scope captures a whole iteration.
+            TransformerLayer._forward_attention(). "ful_iteration" scope captures a whole iteration. full_iteration
+            scope is only supported with --cuda-graph-impl=local, attn scope is only supported with
+            --cuda-graph-impl=transformer_engine.
+        use_legacy_static_engine (`bool`, *optional*, defaults to `False`):
+            Argument use_legacy_static_engine. Use legacy static engine. (Current static engine uses dynamic engine
+            under the hood)
         inference_max_batch_size (`int`, *optional*, defaults to 8):
             Argument inference_max_batch_size. Maximum number of requests for inference.
         inference_max_seq_length (`int`, *optional*, defaults to 2560):
@@ -1214,14 +1264,14 @@ class MegatronConfig(PretrainedConfig):
         inference_dynamic_batching (`bool`, *optional*, defaults to `False`):
             Argument inference_dynamic_batching. Enable dynamic batching mode.
         inference_dynamic_batching_buffer_size_gb (`float`, *optional*, defaults to 40.0):
-            Argument inference_dynamic_batching_buffer_size_gb. Total buffer size (GB) allocated for the chunked KV
+            Argument inference_dynamic_batching_buffer_size_gb. Total buffer size (GB) allocated for the block-level KV
             memory.
-        inference_dynamic_batching_chunk_size (`int`, *optional*, defaults to 256):
-            Argument inference_dynamic_batching_chunk_size. KV cache chunk size. It should be a multiple of 256
+        inference_dynamic_batching_block_size (`int`, *optional*, defaults to 256):
+            Argument inference_dynamic_batching_block_size. KV cache block size. It should be a multiple of 256
         inference_dynamic_batching_buffer_guaranteed_fraction (`float`, *optional*, defaults to 0.2):
             Argument inference_dynamic_batching_buffer_guaranteed_fraction. Space is reserved within the inference
             context memory buffer to guarantee that a minimum number of active requests will always be able to run to
-            completion. This is to avoid the context being blocked by paused requests.
+            completion. This is to avoid the context being deadlocked by paused requests.
         inference_dynamic_batching_buffer_overflow_factor (`float`):
             Argument inference_dynamic_batching_buffer_overflow_factor. Scaling factor over the memory buffer size for
             auto computing `max_requests` and `max_tokens`. This scaling factor is used for fitting more requests and
@@ -1239,6 +1289,8 @@ class MegatronConfig(PretrainedConfig):
         inference_dynamic_batching_track_paused_request_events (`bool`, *optional*, defaults to `False`):
             Argument inference_dynamic_batching_track_paused_request_events. Track paused request ids by adding
             'paused' events to each request's event history. This has a very minor impact on latency.
+        decode_only_cuda_graphs (`bool`, *optional*, defaults to `False`):
+            Argument decode_only_cuda_graphs. Only use cuda graphs for decode-only steps, not prefill and mixed steps.
         inference_dynamic_batching_unified_memory_level (`int`, *optional*, defaults to 0):
             Argument inference_dynamic_batching_unified_memory_level. Set unified memory usage within the dynamic
             inference context. The levels are: 0) no unified memory, 1) allocate `memory_buffer` in unified memory.
@@ -1253,14 +1305,18 @@ class MegatronConfig(PretrainedConfig):
         mlp_chunks_for_prefill (`int`, *optional*, defaults to 1):
             Argument mlp_chunks_for_prefill. Number of chunks along sequence dimension for MLP computation during
             prefill
-        initialize_socket_comms (`bool`, *optional*, defaults to `False`):
-            Argument initialize_socket_comms. Initialize socket communication for dynamic engine coordinator.
         disable_chunked_prefill (`bool`, *optional*, defaults to `False`):
             Argument disable_chunked_prefill. Disable chunked prefill (chunked prefill is enabled by default).
+        inference_wandb_logging_step_interval (`int`, *optional*, defaults to 0):
+            Argument inference_wandb_logging_step_interval. Step interval for logging inference metrics to wandb.
+            Default to 0 to disable inference wandb logging.
         fp8 (`str`):
             Argument fp8. Which fp8 format scheme to use for FP8 tensors in the forward and backward pass
         fp8_recipe (`str`, *optional*, defaults to "delayed"):
             Argument fp8_recipe. Which fp8 recipe to use for FP8 tensors in the forward and backward pass
+        fp8_quantizer_factory (`str`):
+            Argument fp8_quantizer_factory. Python import path to a callable quantizer factory, e.g.,
+            package.module.quantizer_factory.
         fp8_margin (`int`, *optional*, defaults to 0):
             Argument fp8_margin. Scaling margin for fp8
         fp8_interval (`int`, *optional*, defaults to 1):
@@ -1288,6 +1344,9 @@ class MegatronConfig(PretrainedConfig):
             Argument fp4. Which nvfp4 format scheme to use for FP4 tensors in the forward and backward pass
         fp4_recipe (`str`, *optional*, defaults to "nvfp4"):
             Argument fp4_recipe. Which fp4 recipe to use for FP4 tensors in the forward and backward pass
+        fp4_quantizer_factory (`str`):
+            Argument fp4_quantizer_factory. Python import path to a callable quantizer factory, e.g.,
+            package.module.quantizer_factory.
         fp4_param (`bool`, *optional*, defaults to `False`):
             Argument fp4_param. Keep the compute param in fp4 (do not use any other intermediate dtype) and perform the
             param all-gather in fp4.
@@ -1524,6 +1583,7 @@ class MegatronConfig(PretrainedConfig):
         recompute_method: str = None,
         recompute_num_layers: int = None,
         recompute_modules: list[str] = None,
+        cpu_offloading_num_layers: int = 0,
         clone_scatter_output_in_embedding: bool = True,
         profile: bool = False,
         profile_step_start: int = 10,
@@ -1556,6 +1616,7 @@ class MegatronConfig(PretrainedConfig):
         exit_interval: int = None,
         exit_duration_in_mins: int = None,
         exit_signal_handler: bool = False,
+        exit_signal: str = "SIGTERM",
         tensorboard_dir: str = None,
         masked_softmax_fusion: bool = True,
         bias_gelu_fusion: bool = True,
@@ -1574,6 +1635,7 @@ class MegatronConfig(PretrainedConfig):
         optimizer_offload_fraction: float = 1.0,
         use_torch_optimizer_for_cpu_offload: bool = False,
         overlap_cpu_optimizer_d2h_h2d: bool = False,
+        dump_param_to_param_group_map: str = None,
         pin_cpu_grads: bool = True,
         pin_cpu_params: bool = True,
         dataloader_type: str = None,
@@ -1605,6 +1667,7 @@ class MegatronConfig(PretrainedConfig):
         grpo_default_top_p: float = 0,
         langrl_inference_server_type: str = "inplace_megatron",
         langrl_inference_server_conversation_template: str = None,
+        langrl_external_server: None = False,
         langrl_env_config: str = None,
         rl_offload_optimizer_during_inference: bool = False,
         rl_offload_kv_cache_during_training: None = False,
@@ -1614,6 +1677,9 @@ class MegatronConfig(PretrainedConfig):
         rl_inference_logprobs_is_correction: bool = False,
         rl_importance_sampling_truncation_coef: float = None,
         rl_calculate_intra_group_similarity: None = False,
+        rl_use_sequence_packing: bool = False,
+        rl_sequence_packing_bin_size: int = 8192,
+        rl_sequence_packing_algo: str = "fifo",
         seed: int = 1234,
         data_parallel_random_init: bool = False,
         init_method_std: float = 0.02,
@@ -1676,7 +1742,6 @@ class MegatronConfig(PretrainedConfig):
         dist_ckpt_save_pre_mcore_014: bool = False,
         dist_ckpt_optim_fully_reshardable: bool = False,
         distrib_optim_fully_reshardable_mem_efficient: bool = False,
-        load_model_opt_format: bool = False,
         fp16: bool = False,
         bf16: bool = False,
         grad_reduce_in_bf16: bool = False,
@@ -1705,6 +1770,7 @@ class MegatronConfig(PretrainedConfig):
         overlap_p2p_comm_warmup_flush: bool = False,
         distributed_backend: None = "nccl",
         distributed_timeout_minutes: int = 10,
+        distributed_timeout_seconds_after_init: int = None,
         overlap_grad_reduce: bool = False,
         defer_embedding_wgrad_compute: bool = False,
         wgrad_deferral_limit: int = 0,
@@ -1712,6 +1778,7 @@ class MegatronConfig(PretrainedConfig):
         ddp_num_buckets: int = None,
         ddp_bucket_size: int = None,
         ddp_pad_buckets_for_high_nccl_busbw: bool = False,
+        ddp_reduce_scatter_with_fp32_accumulation: bool = False,
         ddp_average_in_collective: bool = False,
         overlap_param_gather: bool = False,
         overlap_param_gather_with_optimizer_step: bool = False,
@@ -1777,6 +1844,7 @@ class MegatronConfig(PretrainedConfig):
         num_dataset_builder_threads: int = 1,
         object_storage_cache_path: str = None,
         mid_level_dataset_surplus: float = 0.005,
+        allow_ambiguous_pad_tokens: bool = False,
         vocab_size: int = None,
         padded_vocab_size: int = None,
         vocab_file: str = None,
@@ -1874,6 +1942,7 @@ class MegatronConfig(PretrainedConfig):
         overlap_moe_expert_parallel_comm: bool = False,
         delay_wgrad_compute: bool = False,
         moe_upcycling_granularity: int = 1,
+        moe_pad_experts_for_cuda_graph_inference: bool = False,
         q_lora_rank: int = None,
         kv_lora_rank: int = 32,
         qk_head_dim: int = 128,
@@ -1918,26 +1987,30 @@ class MegatronConfig(PretrainedConfig):
         enable_cuda_graph: bool = False,
         cuda_graph_warmup_steps: int = 3,
         external_cuda_graph: bool = False,
+        cuda_graph_impl: str = "none",
         cuda_graph_scope: str = "full",
+        use_legacy_static_engine: bool = False,
         inference_max_batch_size: int = 8,
         inference_max_seq_length: int = 2560,
         inference_dynamic_batching: bool = False,
         inference_dynamic_batching_buffer_size_gb: float = 40.0,
-        inference_dynamic_batching_chunk_size: int = 256,
+        inference_dynamic_batching_block_size: int = 256,
         inference_dynamic_batching_buffer_guaranteed_fraction: float = 0.2,
         inference_dynamic_batching_buffer_overflow_factor: float = None,
         inference_dynamic_batching_max_requests_override: int = None,
         inference_dynamic_batching_max_tokens_override: int = None,
         inference_dynamic_batching_num_cuda_graphs: int = 16,
         inference_dynamic_batching_track_paused_request_events: bool = False,
+        decode_only_cuda_graphs: bool = False,
         inference_dynamic_batching_unified_memory_level: int = 0,
         symmetric_ar_type: str = None,
         nccl_all_reduce_for_prefill: bool = False,
         mlp_chunks_for_prefill: int = 1,
-        initialize_socket_comms: bool = False,
         disable_chunked_prefill: bool = False,
+        inference_wandb_logging_step_interval: int = 0,
         fp8: None = None,
         fp8_recipe: None = "delayed",
+        fp8_quantizer_factory: None = None,
         fp8_margin: int = 0,
         fp8_interval: int = 1,
         fp8_amax_history_len: int = 1,
@@ -1950,6 +2023,7 @@ class MegatronConfig(PretrainedConfig):
         num_layers_at_end_in_bf16: int = 1,
         fp4: None = None,
         fp4_recipe: None = "nvfp4",
+        fp4_quantizer_factory: None = None,
         fp4_param: bool = False,
         te_rng_tracker: bool = False,
         inference_rng_tracker: bool = False,
@@ -2089,6 +2163,7 @@ class MegatronConfig(PretrainedConfig):
         self.recompute_method: str = recompute_method
         self.recompute_num_layers: int = recompute_num_layers
         self.recompute_modules: list[str] = recompute_modules
+        self.cpu_offloading_num_layers: int = cpu_offloading_num_layers
         self.clone_scatter_output_in_embedding: bool = clone_scatter_output_in_embedding
         self.profile: bool = profile
         self.profile_step_start: int = profile_step_start
@@ -2121,6 +2196,7 @@ class MegatronConfig(PretrainedConfig):
         self.exit_interval: int = exit_interval
         self.exit_duration_in_mins: int = exit_duration_in_mins
         self.exit_signal_handler: bool = exit_signal_handler
+        self.exit_signal: str = exit_signal
         self.tensorboard_dir: str = tensorboard_dir
         self.masked_softmax_fusion: bool = masked_softmax_fusion
         self.bias_gelu_fusion: bool = bias_gelu_fusion
@@ -2139,6 +2215,7 @@ class MegatronConfig(PretrainedConfig):
         self.optimizer_offload_fraction: float = optimizer_offload_fraction
         self.use_torch_optimizer_for_cpu_offload: bool = use_torch_optimizer_for_cpu_offload
         self.overlap_cpu_optimizer_d2h_h2d: bool = overlap_cpu_optimizer_d2h_h2d
+        self.dump_param_to_param_group_map: str = dump_param_to_param_group_map
         self.pin_cpu_grads: bool = pin_cpu_grads
         self.pin_cpu_params: bool = pin_cpu_params
         self.dataloader_type: str = dataloader_type
@@ -2170,6 +2247,7 @@ class MegatronConfig(PretrainedConfig):
         self.grpo_default_top_p: float = grpo_default_top_p
         self.langrl_inference_server_type: str = langrl_inference_server_type
         self.langrl_inference_server_conversation_template: str = langrl_inference_server_conversation_template
+        self.langrl_external_server: None = langrl_external_server
         self.langrl_env_config: str = langrl_env_config
         self.rl_offload_optimizer_during_inference: bool = rl_offload_optimizer_during_inference
         self.rl_offload_kv_cache_during_training: None = rl_offload_kv_cache_during_training
@@ -2179,6 +2257,9 @@ class MegatronConfig(PretrainedConfig):
         self.rl_inference_logprobs_is_correction: bool = rl_inference_logprobs_is_correction
         self.rl_importance_sampling_truncation_coef: float = rl_importance_sampling_truncation_coef
         self.rl_calculate_intra_group_similarity: None = rl_calculate_intra_group_similarity
+        self.rl_use_sequence_packing: bool = rl_use_sequence_packing
+        self.rl_sequence_packing_bin_size: int = rl_sequence_packing_bin_size
+        self.rl_sequence_packing_algo: str = rl_sequence_packing_algo
         self.seed: int = seed
         self.data_parallel_random_init: bool = data_parallel_random_init
         self.init_method_std: float = init_method_std
@@ -2241,7 +2322,6 @@ class MegatronConfig(PretrainedConfig):
         self.dist_ckpt_save_pre_mcore_014: bool = dist_ckpt_save_pre_mcore_014
         self.dist_ckpt_optim_fully_reshardable: bool = dist_ckpt_optim_fully_reshardable
         self.distrib_optim_fully_reshardable_mem_efficient: bool = distrib_optim_fully_reshardable_mem_efficient
-        self.load_model_opt_format: bool = load_model_opt_format
         self.fp16: bool = fp16
         self.bf16: bool = bf16
         self.grad_reduce_in_bf16: bool = grad_reduce_in_bf16
@@ -2270,6 +2350,7 @@ class MegatronConfig(PretrainedConfig):
         self.overlap_p2p_comm_warmup_flush: bool = overlap_p2p_comm_warmup_flush
         self.distributed_backend: None = distributed_backend
         self.distributed_timeout_minutes: int = distributed_timeout_minutes
+        self.distributed_timeout_seconds_after_init: int = distributed_timeout_seconds_after_init
         self.overlap_grad_reduce: bool = overlap_grad_reduce
         self.defer_embedding_wgrad_compute: bool = defer_embedding_wgrad_compute
         self.wgrad_deferral_limit: int = wgrad_deferral_limit
@@ -2277,6 +2358,7 @@ class MegatronConfig(PretrainedConfig):
         self.ddp_num_buckets: int = ddp_num_buckets
         self.ddp_bucket_size: int = ddp_bucket_size
         self.ddp_pad_buckets_for_high_nccl_busbw: bool = ddp_pad_buckets_for_high_nccl_busbw
+        self.ddp_reduce_scatter_with_fp32_accumulation: bool = ddp_reduce_scatter_with_fp32_accumulation
         self.ddp_average_in_collective: bool = ddp_average_in_collective
         self.overlap_param_gather: bool = overlap_param_gather
         self.overlap_param_gather_with_optimizer_step: bool = overlap_param_gather_with_optimizer_step
@@ -2342,6 +2424,7 @@ class MegatronConfig(PretrainedConfig):
         self.num_dataset_builder_threads: int = num_dataset_builder_threads
         self.object_storage_cache_path: str = object_storage_cache_path
         self.mid_level_dataset_surplus: float = mid_level_dataset_surplus
+        self.allow_ambiguous_pad_tokens: bool = allow_ambiguous_pad_tokens
         self.vocab_size: int = vocab_size
         self.padded_vocab_size: int = padded_vocab_size
         self.vocab_file: str = vocab_file
@@ -2439,6 +2522,7 @@ class MegatronConfig(PretrainedConfig):
         self.overlap_moe_expert_parallel_comm: bool = overlap_moe_expert_parallel_comm
         self.delay_wgrad_compute: bool = delay_wgrad_compute
         self.moe_upcycling_granularity: int = moe_upcycling_granularity
+        self.moe_pad_experts_for_cuda_graph_inference: bool = moe_pad_experts_for_cuda_graph_inference
         self.q_lora_rank: int = q_lora_rank
         self.kv_lora_rank: int = kv_lora_rank
         self.qk_head_dim: int = qk_head_dim
@@ -2483,26 +2567,30 @@ class MegatronConfig(PretrainedConfig):
         self.enable_cuda_graph: bool = enable_cuda_graph
         self.cuda_graph_warmup_steps: int = cuda_graph_warmup_steps
         self.external_cuda_graph: bool = external_cuda_graph
+        self.cuda_graph_impl: str = cuda_graph_impl
         self.cuda_graph_scope: str = cuda_graph_scope
+        self.use_legacy_static_engine: bool = use_legacy_static_engine
         self.inference_max_batch_size: int = inference_max_batch_size
         self.inference_max_seq_length: int = inference_max_seq_length
         self.inference_dynamic_batching: bool = inference_dynamic_batching
         self.inference_dynamic_batching_buffer_size_gb: float = inference_dynamic_batching_buffer_size_gb
-        self.inference_dynamic_batching_chunk_size: int = inference_dynamic_batching_chunk_size
+        self.inference_dynamic_batching_block_size: int = inference_dynamic_batching_block_size
         self.inference_dynamic_batching_buffer_guaranteed_fraction: float = inference_dynamic_batching_buffer_guaranteed_fraction
         self.inference_dynamic_batching_buffer_overflow_factor: float = inference_dynamic_batching_buffer_overflow_factor
         self.inference_dynamic_batching_max_requests_override: int = inference_dynamic_batching_max_requests_override
         self.inference_dynamic_batching_max_tokens_override: int = inference_dynamic_batching_max_tokens_override
         self.inference_dynamic_batching_num_cuda_graphs: int = inference_dynamic_batching_num_cuda_graphs
         self.inference_dynamic_batching_track_paused_request_events: bool = inference_dynamic_batching_track_paused_request_events
+        self.decode_only_cuda_graphs: bool = decode_only_cuda_graphs
         self.inference_dynamic_batching_unified_memory_level: int = inference_dynamic_batching_unified_memory_level
         self.symmetric_ar_type: str = symmetric_ar_type
         self.nccl_all_reduce_for_prefill: bool = nccl_all_reduce_for_prefill
         self.mlp_chunks_for_prefill: int = mlp_chunks_for_prefill
-        self.initialize_socket_comms: bool = initialize_socket_comms
         self.disable_chunked_prefill: bool = disable_chunked_prefill
+        self.inference_wandb_logging_step_interval: int = inference_wandb_logging_step_interval
         self.fp8: None = fp8
         self.fp8_recipe: None = fp8_recipe
+        self.fp8_quantizer_factory: None = fp8_quantizer_factory
         self.fp8_margin: int = fp8_margin
         self.fp8_interval: int = fp8_interval
         self.fp8_amax_history_len: int = fp8_amax_history_len
@@ -2515,6 +2603,7 @@ class MegatronConfig(PretrainedConfig):
         self.num_layers_at_end_in_bf16: int = num_layers_at_end_in_bf16
         self.fp4: None = fp4
         self.fp4_recipe: None = fp4_recipe
+        self.fp4_quantizer_factory: None = fp4_quantizer_factory
         self.fp4_param: bool = fp4_param
         self.te_rng_tracker: bool = te_rng_tracker
         self.inference_rng_tracker: bool = inference_rng_tracker
@@ -2584,6 +2673,7 @@ class MegatronConfig(PretrainedConfig):
         self.use_cache: bool = use_cache
         self.tie_word_embeddings: bool = tie_word_embeddings
 
+        self.num_hidden_layers: int = num_layers
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,

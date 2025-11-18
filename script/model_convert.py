@@ -12,9 +12,18 @@ import torch
 
 import torch.distributed as dist
 import os
+import json
 from types import SimpleNamespace
-
+import shutil
 import inspect
+import sys
+from pathlib import Path
+
+# Add script directory to path for imports
+script_dir = Path(__file__).parent
+sys.path.insert(0, str(script_dir.parent))
+
+from script.generate_modeling_file import generate_modeling_auto
 
 
 def signature_to_dict(func_or_cls, drop_self=True):
@@ -115,7 +124,7 @@ def main():
     parser.add_argument("--checkpoint-iteration", type=int)
     parser.add_argument("--output-dir", type=str)
     parser.add_argument("--config-subset", type=str, default="megatron")
-    parser.add_argument("overrides", nargs="*", default=[])
+    parser.add_argument("--overrides", type=str, nargs="*", default=[])
 
     args = parser.parse_args()
 
@@ -126,20 +135,28 @@ def main():
         cfg_dict = yaml.safe_load(fp)
         # todo: take care of more nested subsets
 
-    cfg_dict.update(**{arg.split("=")[0]: arg.split("=")[1] for arg in args.overrides})
 
     cfg_dict_base = signature_to_dict(MegatronConfig)
     cfg_dict_base.update(**cfg_dict[args.config_subset])
     cfg_dict = cfg_dict_base
-
+    print(f"Overrides: {args.overrides}")
+    cfg_dict.update(**{arg.split("=")[0]: arg.split("=")[1] for arg in args.overrides})
+    # pretty print cfg_dict 
+    for key, value in cfg_dict.items():
+        print(f"{key}: {value}")
+        print("-"*80)
+    print("-"*80)
+    print("CFG DICT")
+    print("-"*80)   
     cfg_dict["load"] = args.checkpoint_dir
     cfg_dict["pretrained_checkpoint"] = args.checkpoint_dir
     cfg_dict["ckpt_step"] = args.checkpoint_iteration
-    cfg_dict["auto_detect_ckpt_format"] = True
+    # cfg_dict["auto_detect_ckpt_format"] = True
     cfg_dict["tensor_model_parallel_size"] = 1
     cfg_dict["sequence_parallel"] = False
     if cfg_dict["expert_tensor_parallel_size"] is not None:
         cfg_dict["expert_tensor_parallel_size"] = 1
+    cfg_dict["expert_model_parallel_size"] = 1
     cfg_dict["pipeline_model_parallel_size"] = 1
     cfg_dict["context_parallel_size"] = 1
     cfg_dict["recompute_method"] = None
@@ -211,28 +228,6 @@ def main():
     w = m.decoder.layers[0].self_attention.linear_proj.weight
     print("model expects:", tuple(w.shape))
 
-    # from megatron.core.dist_checkpointing import load as dc_load
-    # from megatron.core.dist_checkpointing.state_dict_saver import ShardedStateDictConfig
-    # from megatron.core.dist_checkpointing.mapping import TensorRule
-    # import re
-
-    # def _view_26x2048x2048(t):
-    #     if t.ndim == 4 and t.shape[1:3] == (1, 1) and t.shape[-1] == 2048 * 2048:
-    #         return t.view(t.shape[0], 2048, 2048)
-    #     return t
-
-    # sd_cfg = ShardedStateDictConfig(
-    #     tensor_rules=[
-    #         TensorRule(
-    #             key_pattern=re.compile(r".*decoder\.layers\.\d+\.self_attention\.linear_proj\.weight$"),
-    #             transform=_view_26x2048x2048,
-    #         )
-    #     ]
-    # )
-
-    # meta = dc_load.inspect_load(load_dir=cfg_dict["load"], step=cfg_dict.get("ckpt_step"), materialize_tensors=False)
-    # print(meta["decoder.layers.self_attention.linear_proj.weight"]["global_shape"])
-
     strict_map = {
         "assume_ok": StrictHandling.ASSUME_OK_UNEXPECTED,  # fastest; ignores unexpected, errors on missing
         "log_unexpected": StrictHandling.LOG_UNEXPECTED,  # logs unexpected
@@ -258,20 +253,6 @@ def main():
         checkpoint_dir=cfg_dict["load"],
         strict=strict,
     )
-    # dc_load.load(
-    #     load_dir=megatron_args.load,
-    #     model=megatron_model,
-    #     step=megatron_args.ckpt_step,
-    #     sharded_state_dict_config=sd_cfg,  # or omit if not needed
-    #     strict=True,
-    # )
-    # load_and_reshape_distcp(megatron_args.load + "/iter_0000500/", megatron_model)
-    # args.checkpoint_dir,
-    # megatron_args,
-    # rank0=False,
-    # sharded_state_dict=sharded_state_dict,
-    # checkpointing_context=None,
-    # )
 
     megatron_state_dict = megatron_model.state_dict()
 
@@ -285,7 +266,43 @@ def main():
     hf_model.load_state_dict(hf_state_dict, strict=True)
 
     hf_model.save_pretrained(args.output_dir, from_pt=True)
-
+    # add auto_map to args.output_dir/config.json 
+    config_path = os.path.join(args.output_dir, "config.json")
+    with open(config_path, 'r', encoding="utf-8") as f:
+        config = json.load(f)
+    
+    config.setdefault("auto_map", {})
+    config["auto_map"].update({
+        "AutoConfig": "configuration_megatron.MegatronConfig",
+        "AutoModel": "modeling_megatron.MegatronPretrainedModel",
+        "AutoModelForCausalLM": "modeling_megatron.MegatronForCausalLM",
+    })
+    config["model_type"] = "megatron"
+    with open(config_path, 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=2, sort_keys=True)
+    
+    # Copy configuration files and generate combined modeling file
+    print(f"\nCopying model files to {args.output_dir}...")
+    
+    # Copy configuration_megatron.py and __init__.py
+    for file in ["configuration_megatron.py", "__init__.py"]:
+        src_path = f"src/megatron2huggingface/{file}"
+        dst_path = os.path.join(args.output_dir, file)
+        shutil.copy(src=src_path, dst=dst_path)
+        print(f"  ✓ Copied {file}")
+    
+    # Generate the combined modeling_megatron.py file
+    print(f"  Generating modeling_megatron.py...")
+    modeling_file = generate_modeling_auto(
+        output_dir=args.output_dir,
+        verbose=False  # Use quiet mode to avoid cluttering the output
+    )
+    print(f"  ✓ Generated {modeling_file.name}")
+    
+    print(f"\n{'='*80}")
+    print(f"✓ Model conversion complete!")
+    print(f"  Output directory: {args.output_dir}")
+    print(f"{'='*80}")
 
 if __name__ == "__main__":
     main()
