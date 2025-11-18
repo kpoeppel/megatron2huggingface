@@ -323,6 +323,8 @@ class SelfAttention(nn.Module):
 
         # Handle KV cache for generation
         present_key_value = None
+        using_cache_object = isinstance(past_key_value, Cache)
+        
         if use_cache:
             # Convert from [seq_len, batch, num_heads, head_dim] to [batch, num_heads, seq_len, head_dim]
             key_cache = key.permute(1, 2, 0, 3)
@@ -330,12 +332,14 @@ class SelfAttention(nn.Module):
             
             if past_key_value is not None:
                 # Check if it's a Cache object or legacy tuple
-                if isinstance(past_key_value, Cache):
-                    # Use the Cache API
+                if using_cache_object:
+                    # Use the Cache API - it updates in-place and returns full concatenated tensors
                     cache_kwargs = {"cache_position": cache_position}
                     key_cache, value_cache = past_key_value.update(
                         key_cache, value_cache, self.layer_idx, cache_kwargs
                     )
+                    # Don't return cache for Cache objects (updated in-place in model)
+                    present_key_value = None
                 else:
                     # Legacy tuple format: (key, value)
                     # Check if it's a valid tuple with non-None elements
@@ -347,9 +351,13 @@ class SelfAttention(nn.Module):
                         # Concatenate along sequence dimension
                         key_cache = torch.cat([cached_key, key_cache], dim=2)
                         value_cache = torch.cat([cached_value, value_cache], dim=2)
-            
-            # Store for return
-            present_key_value = (key_cache, value_cache)
+                    # Return cache tuple for legacy format
+                    present_key_value = (key_cache, value_cache)
+            else:
+                # No past cache - first generation step
+                # Return None for Cache mode, tuple for legacy mode
+                if not using_cache_object:
+                    present_key_value = (key_cache, value_cache)
             
             # Convert back to [seq_len, batch, num_heads, head_dim] for attention
             key = key_cache.permute(2, 0, 1, 3)

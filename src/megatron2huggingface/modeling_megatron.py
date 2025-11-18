@@ -321,11 +321,15 @@ class MegatronModel(MegatronPreTrainedModel):
                 use_cache = False
 
         past_key_values_length = 0
-        if use_cache:
-            use_legacy_cache = not isinstance(past_key_values, Cache)
-            if use_legacy_cache:
-                past_key_values = DynamicCache.from_legacy_cache(past_key_values)
-            past_key_values_length = past_key_values.get_seq_length(seq_length)
+        if use_cache and past_key_values is not None:
+            # Handle both Cache objects and legacy tuples
+            if isinstance(past_key_values, Cache):
+                past_key_values_length = past_key_values.get_seq_length()
+            else:
+                # Legacy tuple format - get length from first layer's key cache
+                if len(past_key_values) > 0 and past_key_values[0] is not None:
+                    if isinstance(past_key_values[0], (tuple, list)) and len(past_key_values[0]) > 0:
+                        past_key_values_length = past_key_values[0][0].shape[2] if past_key_values[0][0] is not None else 0
 
         if position_ids is None:
             device = input_ids.device if input_ids is not None else inputs_embeds.device
@@ -395,7 +399,17 @@ class MegatronModel(MegatronPreTrainedModel):
                 all_hidden_states += (hidden_states,)
 
             # Get the cache for this specific layer
-            layer_past_key_value = past_key_values[layer_idx] if past_key_values is not None else None
+            if past_key_values is not None:
+                if isinstance(past_key_values, Cache):
+                    # Pass the entire Cache object - it handles layer indexing internally
+                    layer_past_key_value = past_key_values
+                elif layer_idx < len(past_key_values):
+                    # Legacy format: tuple of (key, value) tuples for each layer
+                    layer_past_key_value = past_key_values[layer_idx]
+                else:
+                    layer_past_key_value = None
+            else:
+                layer_past_key_value = None
 
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
@@ -423,7 +437,9 @@ class MegatronModel(MegatronPreTrainedModel):
 
             if use_cache:
                 # Accumulate cache from each layer
-                next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
+                layer_cache = layer_outputs[2 if output_attentions else 1]
+                if layer_cache is not None:
+                    next_decoder_cache += (layer_cache,)
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
@@ -436,9 +452,12 @@ class MegatronModel(MegatronPreTrainedModel):
 
         next_cache = None
         if use_cache:
-            # next_decoder_cache is already a tuple of (key, value) tuples for each layer
-            # So it's already in legacy format
-            next_cache = next_decoder_cache if next_decoder_cache else None
+            # If we received a Cache object, return it (it was updated in-place)
+            # Otherwise return the accumulated tuple of tuples
+            if isinstance(past_key_values, Cache):
+                next_cache = past_key_values
+            else:
+                next_cache = next_decoder_cache if next_decoder_cache else None
             
         if not return_dict:
             return tuple(
