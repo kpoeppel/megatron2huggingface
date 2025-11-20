@@ -25,7 +25,7 @@ from transformers.modeling_attn_mask_utils import (
 )
 from transformers.generation.utils import GenerationMixin
 from .configuration_megatron import MegatronConfig
-from .modeling import SelfAttention, MLP, LayerNorm, RMSNorm, MoeMLP
+from .modeling import SelfAttention, MLP, LayerNorm, RMSNorm, MoeMLP, MegatronRotaryEmbedding
 
 
 logger = logging.get_logger(__name__)
@@ -45,64 +45,6 @@ def _get_unpad_data(attention_mask):
         max_seqlen_in_batch,
     )
 
-
-class MegatronRotaryEmbedding(nn.Module):
-    """Rotary Position Embedding implementation compatible with Megatron-LM."""
-
-    def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
-        super().__init__()
-        self.dim = dim
-        self.max_position_embeddings = max_position_embeddings
-        self.base = base
-        inv_freq = 1.0 / (
-            self.base ** (torch.arange(0, self.dim, 2).float().to(device) / self.dim)
-        )
-        self.register_buffer("inv_freq", inv_freq, persistent=False)
-
-        # Build here to make `torch.jit.trace` work.
-        self._set_cos_sin_cache(
-            seq_len=max_position_embeddings,
-            device=self.inv_freq.device,
-            dtype=torch.get_default_dtype(),
-        )
-
-    def _set_cos_sin_cache(self, seq_len, device, dtype):
-        self.max_seq_len_cached = seq_len
-        t = torch.arange(
-            self.max_seq_len_cached, device=device, dtype=self.inv_freq.dtype
-        )
-
-        freqs = torch.outer(t, self.inv_freq)
-        # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = torch.cat((freqs, freqs), dim=-1)
-        self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
-        self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
-
-    def forward(self, x, seq_len=None):
-        # x: [bs, num_attention_heads, seq_len, head_size]
-        if seq_len > self.max_seq_len_cached:
-            self._set_cos_sin_cache(seq_len=seq_len, device=x.device, dtype=x.dtype)
-
-        return (
-            self.cos_cached[:seq_len].to(dtype=x.dtype),
-            self.sin_cached[:seq_len].to(dtype=x.dtype),
-        )
-
-
-def rotate_half(x):
-    """Rotates half the hidden dims of the input."""
-    x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
-    return torch.cat((-x2, x1), dim=-1)
-
-
-def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
-    """Applies Rotary Position Embedding to the query and key tensors."""
-    cos = cos[position_ids].unsqueeze(unsqueeze_dim)
-    sin = sin[position_ids].unsqueeze(unsqueeze_dim)
-    q_embed = (q * cos) + (rotate_half(q) * sin)
-    k_embed = (k * cos) + (rotate_half(k) * sin)
-    return q_embed, k_embed
 
 
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
@@ -146,10 +88,11 @@ class MegatronDecoderLayer(nn.Module):
         hidden_states: torch.Tensor,
         attention_mask: torch.Tensor | None = None,
         position_ids: torch.LongTensor | None = None,
-        past_key_value: tuple[torch.Tensor] | None = None,
+        past_key_values: tuple[torch.Tensor] | Cache | None = None,
         output_attentions: bool | None = False,
         use_cache: bool | None = False,
         cache_position: torch.LongTensor | None = None,
+        rotary_pos_emb: tuple[torch.Tensor, torch.Tensor] | None = None,
         **kwargs,
     ) -> tuple[torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor] | None]:
         if "padding_mask" in kwargs:
@@ -166,10 +109,11 @@ class MegatronDecoderLayer(nn.Module):
             hidden_states=hidden_states.permute(1, 0, 2),
             attention_mask=attention_mask,
             position_ids=position_ids,
-            past_key_value=past_key_value,
+            past_key_value=past_key_values,
             output_attentions=output_attentions,
             use_cache=use_cache,
             cache_position=cache_position,
+            rotary_pos_emb=rotary_pos_emb,
             **kwargs,
         )
         # returns (S, B, H)
@@ -244,6 +188,23 @@ class MegatronModel(MegatronPreTrainedModel):
             )
         else:
             self.embed_positions = None
+
+        # Rotary position embeddings (if using rotary)
+        if config.use_rotary_position_embeddings:
+            head_dim = (
+                config.kv_channels
+                if config.kv_channels is not None
+                else (config.hidden_size // config.num_attention_heads)
+            )
+            rotary_dim = int(head_dim * getattr(config, "rotary_percent", 1.0))
+            rotary_base = getattr(config, "rotary_base", 10000)
+            self.rotary_emb = MegatronRotaryEmbedding(
+                dim=rotary_dim,
+                max_position_embeddings=config.max_position_embeddings,
+                base=rotary_base,
+            )
+        else:
+            self.rotary_emb = None
 
         self.layers = nn.ModuleList(
             [
@@ -320,6 +281,29 @@ class MegatronModel(MegatronPreTrainedModel):
                 )
                 use_cache = False
 
+        # Force Cache object format when use_cache=True
+        # Convert legacy tuple format to Cache object if needed
+        if use_cache:
+            if past_key_values is None:
+                # Create new DynamicCache on first pass
+                past_key_values = DynamicCache(config=self.config)
+            elif not isinstance(past_key_values, Cache):
+                # Convert legacy tuple format to Cache object
+                # Legacy format: [(K0,V0), (K1,V1), ...]
+                # Create DynamicCache and populate with existing cache
+                cache = DynamicCache(config=self.config)
+                for layer_idx, (cached_key, cached_value) in enumerate(past_key_values):
+                    if cached_key is not None and cached_value is not None:
+                        # cached_key/value are [batch, num_heads, seq_len, head_dim] - correct format for Cache
+                        # Update cache for this layer
+                        cache.update(
+                            cached_key,  # Already in [batch, num_heads, seq_len, head_dim] format
+                            cached_value,
+                            layer_idx=layer_idx,
+                            cache_kwargs={}
+                        )
+                past_key_values = cache
+
         past_key_values_length = 0
         if use_cache and past_key_values is not None:
             # Handle both Cache objects and legacy tuples
@@ -390,6 +374,22 @@ class MegatronModel(MegatronPreTrainedModel):
         # decoder layers
         hidden_states = inputs_embeds
 
+        # Compute rotary position embeddings if enabled
+        rotary_pos_emb = None
+        if self.rotary_emb is not None:
+            # Get sequence length - need to account for past_key_values_length when using cache
+            if position_ids is not None:
+                # position_ids is [batch, seq_len], get max position
+                max_position = position_ids.max().item() + 1
+            else:
+                max_position = seq_length + past_key_values_length
+
+            # Create a dummy tensor to get device and dtype for rotary embeddings
+            # Use a tensor with shape that matches what rotary_emb expects
+            dummy_tensor = hidden_states[0:1, 0:1, :] if len(hidden_states.shape) == 3 else hidden_states
+            cos, sin = self.rotary_emb(dummy_tensor, seq_len=max_position)
+            rotary_pos_emb = (cos, sin)
+
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = () if use_cache else None
@@ -399,17 +399,19 @@ class MegatronModel(MegatronPreTrainedModel):
                 all_hidden_states += (hidden_states,)
 
             # Get the cache for this specific layer
+            # When using Cache objects, pass the entire object (it handles layer indexing internally)
+            # Legacy format support kept for backward compatibility but shouldn't be reached after forcing Cache format
             if past_key_values is not None:
                 if isinstance(past_key_values, Cache):
                     # Pass the entire Cache object - it handles layer indexing internally
-                    layer_past_key_value = past_key_values
+                    layer_past_key_values = past_key_values
                 elif layer_idx < len(past_key_values):
                     # Legacy format: tuple of (key, value) tuples for each layer
-                    layer_past_key_value = past_key_values[layer_idx]
+                    layer_past_key_values = past_key_values[layer_idx]
                 else:
-                    layer_past_key_value = None
+                    layer_past_key_values = None
             else:
-                layer_past_key_value = None
+                layer_past_key_values = None
 
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
@@ -417,29 +419,33 @@ class MegatronModel(MegatronPreTrainedModel):
                     hidden_states,
                     attention_mask,
                     position_ids,
-                    layer_past_key_value,
+                    layer_past_key_values,
                     output_attentions,
                     use_cache,
                     cache_position,
+                    rotary_pos_emb,
                 )
             else:
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,
                     position_ids=position_ids,
-                    past_key_value=layer_past_key_value,
+                    past_key_values=layer_past_key_values,
                     output_attentions=output_attentions,
                     use_cache=use_cache,
                     cache_position=cache_position,
+                    rotary_pos_emb=rotary_pos_emb,
                 )
 
             hidden_states = layer_outputs[0]
 
             if use_cache:
-                # Accumulate cache from each layer
-                layer_cache = layer_outputs[2 if output_attentions else 1]
-                if layer_cache is not None:
-                    next_decoder_cache += (layer_cache,)
+                # For Cache objects, cache is updated in-place, so we don't accumulate
+                # For legacy format, accumulate cache from each layer
+                if not isinstance(past_key_values, Cache):
+                    layer_cache = layer_outputs[2 if output_attentions else 1]
+                    if layer_cache is not None:
+                        next_decoder_cache += (layer_cache,)
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
@@ -452,12 +458,33 @@ class MegatronModel(MegatronPreTrainedModel):
 
         next_cache = None
         if use_cache:
-            # If we received a Cache object, return it (it was updated in-place)
-            # Otherwise return the accumulated tuple of tuples
+            # Always return Cache object (it was updated in-place)
+            # Legacy format handling kept for backward compatibility but shouldn't be reached
             if isinstance(past_key_values, Cache):
                 next_cache = past_key_values
             else:
-                next_cache = next_decoder_cache if next_decoder_cache else None
+                # Legacy format: convert to Cache object before returning
+                # This should not happen if we forced Cache format above, but keep for safety
+                if len(next_decoder_cache) > 0:
+                    # Convert legacy tuple format to Cache object
+                    cache = DynamicCache(config=self.config)
+                    for layer_idx, (cached_key, cached_value) in enumerate(next_decoder_cache):
+                        if cached_key is not None and cached_value is not None:
+                            cache.update(
+                                cached_key,  # Already in [batch, num_heads, seq_len, head_dim] format
+                                cached_value,
+                                layer_idx=layer_idx,
+                                cache_kwargs={}
+                            )
+                    next_cache = cache
+                elif past_key_values is None:
+                    # First pass - should have cache from all layers
+                    # If empty, something went wrong, but return None to avoid errors
+                    next_cache = None
+                else:
+                    # Subsequent pass but no cache returned - shouldn't happen
+                    # Return the original cache
+                    next_cache = past_key_values
             
         if not return_dict:
             return tuple(

@@ -1,49 +1,34 @@
-"""Embedding components for Megatron models."""
+# """Embedding components for Megatron models."""
 
 import torch
 import torch.nn as nn
 
 
 class MegatronRotaryEmbedding(nn.Module):
-    """Rotary Position Embedding (RoPE) implementation for Megatron models."""
+    """Rotary Position Embedding implementation compatible with Megatron-LM."""
 
-    def __init__(
-        self,
-        dim: int,
-        max_position_embeddings: int = 2048,
-        base: float = 10000.0,
-        device: torch.device | None = None,
-    ):
-        """Initialize RoPE embeddings.
-
-        Args:
-            dim: Dimension of the embeddings (should be head_dim)
-            max_position_embeddings: Maximum sequence length
-            base: Base for the geometric progression
-            device: Device to place tensors on
-        """
+    def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
         super().__init__()
         self.dim = dim
         self.max_position_embeddings = max_position_embeddings
         self.base = base
-
-        # Compute the inverse frequencies
-        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+        inv_freq = 1.0 / (
+            self.base ** (torch.arange(0, self.dim, 2).float().to(device) / self.dim)
+        )
         self.register_buffer("inv_freq", inv_freq, persistent=False)
 
-        # Build cosine and sine cache for efficiency
+        # Build here to make `torch.jit.trace` work.
         self._set_cos_sin_cache(
             seq_len=max_position_embeddings,
-            device=device,
+            device=self.inv_freq.device,
             dtype=torch.get_default_dtype(),
         )
 
-    def _set_cos_sin_cache(
-        self, seq_len: int, device: torch.device, dtype: torch.dtype
-    ):
-        """Set the cosine and sine cache for the given sequence length."""
+    def _set_cos_sin_cache(self, seq_len, device, dtype):
         self.max_seq_len_cached = seq_len
-        t = torch.arange(seq_len, device=device, dtype=self.inv_freq.dtype)
+        t = torch.arange(
+            self.max_seq_len_cached, device=device, dtype=self.inv_freq.dtype
+        )
 
         freqs = torch.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
@@ -51,22 +36,8 @@ class MegatronRotaryEmbedding(nn.Module):
         self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
         self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
 
-    def forward(
-        self, x: torch.Tensor, seq_len: int | None = None
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Forward pass to get cosine and sine embeddings.
-
-        Args:
-            x: Input tensor (used for device and dtype inference)
-            seq_len: Sequence length (if None, uses x.shape[-2])
-
-        Returns:
-            Tuple of (cos, sin) embeddings
-        """
+    def forward(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
-        if seq_len is None:
-            seq_len = x.shape[-2]
-
         if seq_len > self.max_seq_len_cached:
             self._set_cos_sin_cache(seq_len=seq_len, device=x.device, dtype=x.dtype)
 
@@ -76,34 +47,138 @@ class MegatronRotaryEmbedding(nn.Module):
         )
 
 
-def rotate_half(x: torch.Tensor) -> torch.Tensor:
+def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2 :]
     return torch.cat((-x2, x1), dim=-1)
 
 
-def apply_rotary_pos_emb(
-    q: torch.Tensor, k: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Apply rotary position embedding to query and key tensors.
-
+def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
+    """Applies Rotary Position Embedding to the query and key tensors.
+    
     Args:
-        q: Query tensor [batch_size, num_heads, seq_len, head_dim]
-        k: Key tensor [batch_size, num_heads, seq_len, head_dim]
-        cos: Cosine embeddings [seq_len, head_dim]
-        sin: Sine embeddings [seq_len, head_dim]
-
-    Returns:
-        Tuple of rotated (q, k) tensors
+        q, k: [seq_len, batch, num_heads, head_dim]
+        cos, sin: [max_seq_len, head_dim]
+        position_ids: [batch, seq_len] or [1, seq_len]
     """
-    # Ensure cos and sin have the right shape for broadcasting
-    cos = cos.unsqueeze(0).unsqueeze(0)  # [1, 1, seq_len, head_dim]
-    sin = sin.unsqueeze(0).unsqueeze(0)  # [1, 1, seq_len, head_dim]
-
+    # Index cos and sin using position_ids: [batch, seq_len, head_dim]
+    cos = cos[position_ids]
+    sin = sin[position_ids]
+    
+    # Transpose to match q/k format: [seq_len, batch, head_dim]
+    # q/k are [seq_len, batch, num_heads, head_dim]
+    cos = cos.permute(1, 0, 2)  # [seq_len, batch, head_dim]
+    sin = sin.permute(1, 0, 2)  # [seq_len, batch, head_dim]
+    
+    # Unsqueeze to broadcast over num_heads: [seq_len, batch, 1, head_dim]
+    cos = cos.unsqueeze(2)
+    sin = sin.unsqueeze(2)
+    
     q_embed = (q * cos) + (rotate_half(q) * sin)
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
+
+# class MegatronRotaryEmbedding(nn.Module):
+#     """Rotary Position Embedding (RoPE) implementation for Megatron models."""
+
+#     def __init__(
+#         self,
+#         dim: int,
+#         max_position_embeddings: int = 2048,
+#         base: float = 10000.0,
+#         device: torch.device | None = None,
+#     ):
+#         """Initialize RoPE embeddings.
+
+#         Args:
+#             dim: Dimension of the embeddings (should be head_dim)
+#             max_position_embeddings: Maximum sequence length
+#             base: Base for the geometric progression
+#             device: Device to place tensors on
+#         """
+#         super().__init__()
+#         self.dim = dim
+#         self.max_position_embeddings = max_position_embeddings
+#         self.base = base
+
+#         # Compute the inverse frequencies
+#         inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+#         self.register_buffer("inv_freq", inv_freq, persistent=False)
+
+#         # Build cosine and sine cache for efficiency
+#         self._set_cos_sin_cache(
+#             seq_len=max_position_embeddings,
+#             device=device,
+#             dtype=torch.get_default_dtype(),
+#         )
+
+#     def _set_cos_sin_cache(
+#         self, seq_len: int, device: torch.device, dtype: torch.dtype
+#     ):
+#         """Set the cosine and sine cache for the given sequence length."""
+#         self.max_seq_len_cached = seq_len
+#         t = torch.arange(seq_len, device=device, dtype=self.inv_freq.dtype)
+
+#         freqs = torch.outer(t, self.inv_freq)
+#         # Different from paper, but it uses a different permutation in order to obtain the same calculation
+#         emb = torch.cat((freqs, freqs), dim=-1)
+#         self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
+#         self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
+
+#     def forward(
+#         self, x: torch.Tensor, seq_len: int | None = None
+#     ) -> tuple[torch.Tensor, torch.Tensor]:
+#         """Forward pass to get cosine and sine embeddings.
+
+#         Args:
+#             x: Input tensor (used for device and dtype inference)
+#             seq_len: Sequence length (if None, uses x.shape[-2])
+
+#         Returns:
+#             Tuple of (cos, sin) embeddings
+#         """
+#         # x: [bs, num_attention_heads, seq_len, head_size]
+#         if seq_len is None:
+#             seq_len = x.shape[-2]
+
+#         if seq_len > self.max_seq_len_cached:
+#             self._set_cos_sin_cache(seq_len=seq_len, device=x.device, dtype=x.dtype)
+
+#         return (
+#             self.cos_cached[:seq_len].to(dtype=x.dtype),
+#             self.sin_cached[:seq_len].to(dtype=x.dtype),
+#         )
+
+
+# def rotate_half(x: torch.Tensor) -> torch.Tensor:
+#     """Rotates half the hidden dims of the input."""
+#     x1 = x[..., : x.shape[-1] // 2]
+#     x2 = x[..., x.shape[-1] // 2 :]
+#     return torch.cat((-x2, x1), dim=-1)
+
+
+# def apply_rotary_pos_emb(
+#     q: torch.Tensor, k: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
+# ) -> tuple[torch.Tensor, torch.Tensor]:
+#     """Apply rotary position embedding to query and key tensors.
+
+#     Args:
+#         q: Query tensor [batch_size, num_heads, seq_len, head_dim]
+#         k: Key tensor [batch_size, num_heads, seq_len, head_dim]
+#         cos: Cosine embeddings [seq_len, head_dim]
+#         sin: Sine embeddings [seq_len, head_dim]
+
+#     Returns:
+#         Tuple of rotated (q, k) tensors
+#     """
+#     # Ensure cos and sin have the right shape for broadcasting
+#     cos = cos.unsqueeze(0).unsqueeze(0)  # [1, 1, seq_len, head_dim]
+#     sin = sin.unsqueeze(0).unsqueeze(0)  # [1, 1, seq_len, head_dim]
+
+#     q_embed = (q * cos) + (rotate_half(q) * sin)
+#     k_embed = (k * cos) + (rotate_half(k) * sin)
+#     return q_embed, k_embed
 
 
 class MegatronEmbedding(nn.Module):

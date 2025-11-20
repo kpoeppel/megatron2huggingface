@@ -14,24 +14,9 @@ from transformers.cache_utils import Cache
 
 from ..configuration_megatron import MegatronConfig
 from .layer_norm import LinearLayerNorm
+from .embeddings import apply_rotary_pos_emb
 
 logger = logging.get_logger(__name__)
-
-
-def apply_rotary_pos_emb(
-    tensor, cos, sin, position_ids: torch.Tensor | None, rotary_interleaved=False
-):
-    """Apply rotary positional embedding to tensor."""
-    # TODO: integrate position_ids
-    if rotary_interleaved:
-        # Interleaved format: [x0, x1, x2, x3, ...] -> [x0, x2, x1, x3, ...]
-        x1, x2 = tensor[..., 0::2], tensor[..., 1::2]
-        return torch.cat([x1 * cos - x2 * sin, x1 * sin + x2 * cos], dim=-1)
-    else:
-        # Standard format: split in half
-        half_dim = tensor.shape[-1] // 2
-        x1, x2 = tensor[..., :half_dim], tensor[..., half_dim:]
-        return torch.cat([x1 * cos - x2 * sin, x2 * cos + x1 * sin], dim=-1)
 
 
 class CoreAttention(nn.Module):
@@ -117,7 +102,10 @@ class CoreAttention(nn.Module):
                 attn_mask = attention_mask
             else:
                 attn_mask = attention_bias + attention_mask
-
+        if query.shape[2] == 1:
+            is_causal = False
+        else:
+            is_causal = True
         # Use torch.nn.functional.scaled_dot_product_attention for efficient computation
         # This automatically selects the best backend (FlashAttention, FlexAttention, etc.)
         context = F.scaled_dot_product_attention(
@@ -264,7 +252,7 @@ class SelfAttention(nn.Module):
         rotary_pos_emb: torch.Tensor | tuple[torch.Tensor, torch.Tensor] | None = None,
         attention_bias: torch.Tensor | None = None,
         position_ids: torch.Tensor | None = None,
-        past_key_value: tuple[torch.Tensor] | None = None,
+        past_key_value: Cache | tuple[torch.Tensor] | None = None,
         cache_position: torch.LongTensor | None = None,
         use_cache: bool | None = False,
         output_attentions: bool | None = False,
@@ -278,7 +266,7 @@ class SelfAttention(nn.Module):
             rotary_pos_emb: Optional rotary position embeddings
             attention_bias: Optional attention bias
             position_ids: Optional position IDs
-            past_key_value: Optional cached key/value tensors
+            past_key_value: Optional cached key/value tensors (Cache object or tuple)
             cache_position: Position indices for cache updates
             use_cache: Whether to return cache for generation
             output_attentions: Whether to output attention weights
@@ -286,40 +274,24 @@ class SelfAttention(nn.Module):
         Returns:
             output: [seq_len, batch, hidden_size]
             bias: Optional output bias (None if add_bias_linear=False)
-            present_key_value: Updated cache (if use_cache=True)
+            present_key_value: Updated cache (if use_cache=True, None for Cache objects)
         """
         # Get Q, K, V tensors
         query, key, value = self.get_query_key_value_tensors(hidden_states)
 
         # Apply rotary position embeddings if provided
         if rotary_pos_emb is not None:
-            if isinstance(rotary_pos_emb, tuple):
-                q_pos_emb, k_pos_emb = rotary_pos_emb
-            else:
-                q_pos_emb = k_pos_emb = rotary_pos_emb
-
-            if q_pos_emb is not None:
-                cos, sin = q_pos_emb
-                query = apply_rotary_pos_emb(
-                    query,
-                    cos,
-                    sin,
-                    position_ids=position_ids,
-                    rotary_interleaved=getattr(
-                        self.config, "rotary_interleaved", False
-                    ),
-                )
-            if k_pos_emb is not None:
-                cos, sin = k_pos_emb
-                key = apply_rotary_pos_emb(
-                    key,
-                    cos,
-                    sin,
-                    position_ids=position_ids,
-                    rotary_interleaved=getattr(
-                        self.config, "rotary_interleaved", False
-                    ),
-                )
+            cos, sin = rotary_pos_emb
+            query, key = apply_rotary_pos_emb(
+                query,
+                key,
+                cos,
+                sin,
+                position_ids=position_ids,
+                # rotary_interleaved=getattr(
+                #     self.config, "rotary_interleaved", False
+                # ),
+            )
 
         # Handle KV cache for generation
         present_key_value = None
@@ -334,7 +306,7 @@ class SelfAttention(nn.Module):
                 # Check if it's a Cache object or legacy tuple
                 if using_cache_object:
                     # Use the Cache API - it updates in-place and returns full concatenated tensors
-                    cache_kwargs = {"cache_position": cache_position}
+                    cache_kwargs = {"cache_position": cache_position} if cache_position is not None else {}
                     key_cache, value_cache = past_key_value.update(
                         key_cache, value_cache, self.layer_idx, cache_kwargs
                     )
